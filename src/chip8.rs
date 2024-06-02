@@ -2,7 +2,7 @@ pub struct Chip8 {
     // Buffer for the screen
     screen_buffer: [[bool; 32]; 64],
     // Registers (1 through F)
-    registers: [u16; 16],
+    registers: [u8; 16],
 }
 
 impl Chip8 {
@@ -12,9 +12,53 @@ impl Chip8 {
             registers: [0x00; 16],
         };
     }
-    pub fn step(&mut self, instruction: u16) {}
+    pub fn step(&mut self, inst: u16) {
+        if cfg!(debug_assertions) {
+            println!("Inst is {:x}", inst);
+        }
+        if inst & 0xF000 == 0x6000 {
+            self.ld_vx_kk(inst);
+        } else if inst & 0xF00F == 0x8000 {
+            self.ld_vx_vy(inst);
+        }
+    }
 
-    pub fn get_register_value(&mut self, register: u8) -> u16 {
+    // Get index of the register given the instruction
+    // and the position of the byte from the left in the instruction
+    // i.e. inst = 0xABCD, pos = 3, res = 0x000C
+    fn get_reg_idx(&self, inst: u16, pos: u8) -> usize {
+        return ((inst >> (12 - pos * 4)) & 0x000F) as usize;
+    }
+
+    fn dump_state(&self) {
+        for i in 0..16 {
+            print!("V{:#1x} = {:#1x}, ", i, self.registers[i])
+        }
+        println!("");
+    }
+
+    fn ld_vx_kk(&mut self, inst: u16) {
+        let r = self.get_reg_idx(inst, 1);
+        let kk = (inst & 0x00FF) as u8;
+        if cfg!(debug_assertions) {
+            println!("Register {}", r);
+            println!("Value: {:#1x}", kk);
+        }
+        self.registers[r] = kk;
+    }
+
+    fn ld_vx_vy(&mut self, inst: u16) {
+        let v_x = self.get_reg_idx(inst, 1);
+        let v_y = self.get_reg_idx(inst, 2);
+        self.registers[v_x] = self.registers[v_y];
+        if cfg!(debug_assertions) {
+            println!("Vx {:#1x}", v_x);
+            println!("Vy: {:#1x}", v_y);
+            self.dump_state();
+        }
+    }
+
+    pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
     }
 }
