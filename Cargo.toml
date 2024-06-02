@@ -1,0 +1,6 @@
+[package]
+name = "rust-chip8-opengl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
