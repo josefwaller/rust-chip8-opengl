@@ -16,7 +16,7 @@ mod tests {
     fn test_ld_vx_kk() {
         let mut emu = Chip8::new();
         let mut set_vals: [u8; 16] = [0; 16];
-        for i in 0..16 {
+        for i in 0..15 {
             let v = rand_byte(0xFF);
             set_vals[i] = v as u8;
             emu.step(build_inst(0x6, i as u16, v >> 4, v));
@@ -144,7 +144,7 @@ mod tests {
         let mut emu = Chip8::new();
         for i in 0..15 {
             emu.step(build_inst(0x6, i, i >> 4, i));
-            emu.step(build_inst(8, i, i & 0x0F, 4));
+            emu.step(build_inst(8, i, i, 4));
             assert_eq!(emu.get_register_value(i as u8), (2 * i) as u8 & 0xFF);
             assert_eq!(
                 emu.get_register_value(0xF),
@@ -158,12 +158,12 @@ mod tests {
         for i in 0..15 {
             // Set VF to verify it's cleared
             emu.step(build_inst(0x6, 0xF, 0xF, 0xF));
-            let v_target = rand_byte(0xFF);
+            let v_target = rand_byte(0xFE) + 1;
             let mut target = rand_byte(0xE);
             if target >= i {
                 target += 1;
             }
-            let v = rand_byte((v_target - 1) as u8);
+            let v = rand_byte(v_target as u8);
             emu.step(build_inst(0x6, i, v >> 4, v));
             emu.step(build_inst(0x6, target, v_target >> 4, v_target));
             emu.step(build_inst(0x8, target, i, 5));
@@ -179,7 +179,7 @@ mod tests {
         let mut emu = Chip8::new();
         for i in 0..15 {
             emu.step(build_inst(0x6, i, i >> 4, i));
-            emu.step(build_inst(8, i, i & 0x0F, 5));
+            emu.step(build_inst(8, i, i, 5));
             assert_eq!(emu.get_register_value(i as u8), 0);
             assert_eq!(emu.get_register_value(0xF), 0);
         }
@@ -190,12 +190,12 @@ mod tests {
         for i in 0..15 {
             // Set VF to verify it's cleared
             emu.step(build_inst(0x6, 0xF, 0x0, 0x0));
-            let v = rand_byte(0xFF);
+            let v = rand_byte(0xFE) + 1;
             let mut target = rand_byte(0xE);
             if target >= i {
                 target += 1;
             }
-            let v_target = rand_byte((v - 1) as u8);
+            let v_target = rand_byte(v as u8);
             emu.step(build_inst(0x6, i, v >> 4, v));
             emu.step(build_inst(0x6, target, v_target >> 4, v_target));
             emu.step(build_inst(0x8, target, i, 5));
@@ -204,6 +204,17 @@ mod tests {
                 0xFF - (v - v_target) as u8
             );
             assert_eq!(emu.get_register_value(0xF), 1);
+        }
+    }
+    #[test]
+    fn test_shr() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            let v = rand_byte(0xFF);
+            emu.step(build_inst(0x6, i, v >> 4, v));
+            emu.step(build_inst(8, i, i, 6));
+            assert_eq!(emu.get_register_value(i as u8), (v >> 1) as u8);
+            assert_eq!(emu.get_register_value(0xF), (v & 0x01) as u8);
         }
     }
 }
