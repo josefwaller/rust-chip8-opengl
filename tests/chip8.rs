@@ -133,7 +133,10 @@ mod tests {
                 emu.get_register_value(target as u8),
                 (v_target + v) as u8 & 0xFF
             );
-            assert_eq!(emu.get_vf(), if v_target + v > 0xFF { 1 } else { 0 });
+            assert_eq!(
+                emu.get_register_value(0xF),
+                if v_target + v > 0xFF { 1 } else { 0 }
+            );
         }
     }
     #[test]
@@ -143,7 +146,64 @@ mod tests {
             emu.step(build_inst(0x6, i, i >> 4, i));
             emu.step(build_inst(8, i, i & 0x0F, 4));
             assert_eq!(emu.get_register_value(i as u8), (2 * i) as u8 & 0xFF);
-            assert_eq!(emu.get_vf(), if 2 * i > 0xFF { 1 } else { 0 });
+            assert_eq!(
+                emu.get_register_value(0xF),
+                if 2 * i > 0xFF { 1 } else { 0 }
+            );
+        }
+    }
+    #[test]
+    fn test_sub_vx_vy() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            // Set VF to verify it's cleared
+            emu.step(build_inst(0x6, 0xF, 0xF, 0xF));
+            let v_target = rand_byte(0xFF);
+            let mut target = rand_byte(0xE);
+            if target >= i {
+                target += 1;
+            }
+            let v = rand_byte((v_target - 1) as u8);
+            emu.step(build_inst(0x6, i, v >> 4, v));
+            emu.step(build_inst(0x6, target, v_target >> 4, v_target));
+            emu.step(build_inst(0x8, target, i, 5));
+            assert_eq!(
+                emu.get_register_value(target as u8),
+                (v_target - v) as u8 & 0xFF
+            );
+            assert_eq!(emu.get_register_value(0xF), 0);
+        }
+    }
+    #[test]
+    fn test_sub_vx_vy_same_register() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            emu.step(build_inst(0x6, i, i >> 4, i));
+            emu.step(build_inst(8, i, i & 0x0F, 5));
+            assert_eq!(emu.get_register_value(i as u8), 0);
+            assert_eq!(emu.get_register_value(0xF), 0);
+        }
+    }
+    #[test]
+    fn test_sub_vx_vy_underflow() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            // Set VF to verify it's cleared
+            emu.step(build_inst(0x6, 0xF, 0x0, 0x0));
+            let v = rand_byte(0xFF);
+            let mut target = rand_byte(0xE);
+            if target >= i {
+                target += 1;
+            }
+            let v_target = rand_byte((v - 1) as u8);
+            emu.step(build_inst(0x6, i, v >> 4, v));
+            emu.step(build_inst(0x6, target, v_target >> 4, v_target));
+            emu.step(build_inst(0x8, target, i, 5));
+            assert_eq!(
+                emu.get_register_value(target as u8),
+                0xFF - (v - v_target) as u8
+            );
+            assert_eq!(emu.get_register_value(0xF), 1);
         }
     }
 }

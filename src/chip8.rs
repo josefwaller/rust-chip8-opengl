@@ -3,8 +3,6 @@ pub struct Chip8 {
     screen_buffer: [[bool; 32]; 64],
     // Registers (1 through F)
     registers: [u8; 16],
-    // Register VF
-    vf: u8,
 }
 
 impl Chip8 {
@@ -12,7 +10,6 @@ impl Chip8 {
         return Chip8 {
             screen_buffer: [[false; 32]; 64],
             registers: [0x00; 16],
-            vf: 0x0,
         };
     }
     pub fn step(&mut self, inst: u16) {
@@ -32,6 +29,7 @@ impl Chip8 {
                 2 => self.and_vx_vy(vx, vy),
                 3 => self.xor_vx_vy(vx, vy),
                 4 => self.add_vx_vy(vx, vy),
+                5 => self.sub_vx_vy(vx, vy),
                 _ => panic!("Invalid opcode: '{:X}'", inst),
             }
         } else {
@@ -80,13 +78,23 @@ impl Chip8 {
     fn add_vx_vy(&mut self, vx: usize, vy: usize) {
         let v = self.registers[vx] as u16 + self.registers[vy] as u16;
         self.registers[vx] = v as u8;
-        self.vf = if v > 0xFF { 1 } else { 0 };
+        self.registers[0xF] = if v > 0xFF { 1 } else { 0 };
+    }
+    fn sub_vx_vy(&mut self, vx: usize, vy: usize) {
+        self.registers[0xF] = if self.registers[vy] > self.registers[vx] {
+            1
+        } else {
+            0
+        };
+        let v = if self.registers[vy] > self.registers[vx] {
+            0xFF - (self.registers[vy] - self.registers[vx])
+        } else {
+            self.registers[vx] - self.registers[vy]
+        };
+        self.registers[vx] = v;
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
-    }
-    pub fn get_vf(&mut self) -> u8 {
-        return self.vf;
     }
 }
