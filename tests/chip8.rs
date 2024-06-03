@@ -116,4 +116,34 @@ mod tests {
             assert_eq!(emu.get_register_value(i as u8), 0x00);
         }
     }
+    #[test]
+    fn test_add_vx_vy() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            let v = rand_byte(0xFF);
+            let mut target = rand_byte(0xE);
+            if target >= i {
+                target += 1;
+            }
+            let v_target = rand_byte(0xFF);
+            emu.step(build_inst(0x6, i, v >> 4, v));
+            emu.step(build_inst(0x6, target, v_target >> 4, v_target));
+            emu.step(build_inst(0x8, target, i, 4));
+            assert_eq!(
+                emu.get_register_value(target as u8),
+                (v_target + v) as u8 & 0xFF
+            );
+            assert_eq!(emu.get_vf(), if v_target + v > 0xFF { 1 } else { 0 });
+        }
+    }
+    #[test]
+    fn test_add_vx_vy_same_register() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            emu.step(build_inst(0x6, i, i >> 4, i));
+            emu.step(build_inst(8, i, i & 0x0F, 4));
+            assert_eq!(emu.get_register_value(i as u8), (2 * i) as u8 & 0xFF);
+            assert_eq!(emu.get_vf(), if 2 * i > 0xFF { 1 } else { 0 });
+        }
+    }
 }

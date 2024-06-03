@@ -3,6 +3,8 @@ pub struct Chip8 {
     screen_buffer: [[bool; 32]; 64],
     // Registers (1 through F)
     registers: [u8; 16],
+    // Register VF
+    vf: u8,
 }
 
 impl Chip8 {
@@ -10,6 +12,7 @@ impl Chip8 {
         return Chip8 {
             screen_buffer: [[false; 32]; 64],
             registers: [0x00; 16],
+            vf: 0x0,
         };
     }
     pub fn step(&mut self, inst: u16) {
@@ -28,10 +31,14 @@ impl Chip8 {
                 1 => self.or_vx_vy(vx, vy),
                 2 => self.and_vx_vy(vx, vy),
                 3 => self.xor_vx_vy(vx, vy),
+                4 => self.add_vx_vy(vx, vy),
                 _ => panic!("Invalid opcode: '{:X}'", inst),
             }
         } else {
             panic!("Invalid opcode: '{:X}'", inst);
+        }
+        if cfg!(debug_assertions) {
+            self.dump_state();
         }
     }
 
@@ -52,41 +59,34 @@ impl Chip8 {
     fn ld_vx_kk(&mut self, inst: u16) {
         let r = self.get_reg_idx(inst, 1);
         let kk = (inst & 0x00FF) as u8;
-        if cfg!(debug_assertions) {
-            self.dump_state();
-        }
         self.registers[r] = kk;
     }
 
     fn ld_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_y];
-        if cfg!(debug_assertions) {
-            self.dump_state();
-        }
     }
 
     fn or_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] | self.registers[v_y];
-        if cfg!(debug_assertions) {
-            self.dump_state();
-        }
     }
 
     fn and_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] & self.registers[v_y];
-        if cfg!(debug_assertions) {
-            self.dump_state();
-        }
     }
 
     fn xor_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] ^ self.registers[v_y];
-        if cfg!(debug_assertions) {
-            self.dump_state();
-        }
+    }
+    fn add_vx_vy(&mut self, vx: usize, vy: usize) {
+        let v = self.registers[vx] as u16 + self.registers[vy] as u16;
+        self.registers[vx] = v as u8;
+        self.vf = if v > 0xFF { 1 } else { 0 };
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
+    }
+    pub fn get_vf(&mut self) -> u8 {
+        return self.vf;
     }
 }
