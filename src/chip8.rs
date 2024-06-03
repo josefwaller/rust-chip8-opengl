@@ -14,12 +14,16 @@ impl Chip8 {
     }
     pub fn step(&mut self, inst: u16) {
         if cfg!(debug_assertions) {
-            println!("Inst is {:x}", inst);
+            println!("Inst is {:X}", inst);
         }
         if inst & 0xF000 == 0x6000 {
             self.ld_vx_kk(inst);
         } else if inst & 0xF00F == 0x8000 {
             self.ld_vx_vy(inst);
+        } else if inst & 0xF00F == 0x8001 {
+            self.or_vx_vy(inst);
+        } else {
+            panic!("Invalid opcode: '{:X}'", inst);
         }
     }
 
@@ -32,7 +36,7 @@ impl Chip8 {
 
     fn dump_state(&self) {
         for i in 0..16 {
-            print!("V{:#1x} = {:#1x}, ", i, self.registers[i])
+            print!("V{:X} = {:#2X}, ", i, self.registers[i])
         }
         println!("");
     }
@@ -41,8 +45,8 @@ impl Chip8 {
         let r = self.get_reg_idx(inst, 1);
         let kk = (inst & 0x00FF) as u8;
         if cfg!(debug_assertions) {
-            println!("Register {}", r);
-            println!("Value: {:#1x}", kk);
+            println!("Register {:X}", r);
+            println!("Value: {:#1X}", kk);
         }
         self.registers[r] = kk;
     }
@@ -54,6 +58,17 @@ impl Chip8 {
         if cfg!(debug_assertions) {
             println!("Vx {:#1x}", v_x);
             println!("Vy: {:#1x}", v_y);
+            self.dump_state();
+        }
+    }
+
+    fn or_vx_vy(&mut self, inst: u16) {
+        let v_x = self.get_reg_idx(inst, 1);
+        let v_y = self.get_reg_idx(inst, 2);
+        self.registers[v_x] = self.registers[v_x] | self.registers[v_y];
+        if cfg!(debug_assertions) {
+            println!("Vx: {:#1}", v_x);
+            println!("Vy: {:#1}", v_y);
             self.dump_state();
         }
     }
