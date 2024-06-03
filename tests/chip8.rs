@@ -87,8 +87,33 @@ mod tests {
         let mut emu = Chip8::new();
         for i in 0..15 {
             emu.step(build_inst(0x6, i, i >> 4, i));
-            emu.step(build_inst(8, i >> 4, i & 0x0F, 2));
+            emu.step(build_inst(8, i, i & 0x0F, 2));
             assert_eq!(emu.get_register_value(i as u8), i as u8);
+        }
+    }
+    #[test]
+    fn test_xor_vx_vy() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            let v = rand_byte(0xFF);
+            let mut target = rand_byte(0xE);
+            if target >= i {
+                target += 1;
+            }
+            let v_target = rand_byte(0xFF);
+            emu.step(build_inst(0x6, i, v >> 4, v));
+            emu.step(build_inst(0x6, target, v_target >> 4, v_target));
+            emu.step(build_inst(0x8, target, i, 3));
+            assert_eq!(emu.get_register_value(target as u8), (v_target ^ v) as u8);
+        }
+    }
+    #[test]
+    fn test_xor_vx_vy_same_register() {
+        let mut emu = Chip8::new();
+        for i in 0..15 {
+            emu.step(build_inst(0x6, i, i >> 4, i));
+            emu.step(build_inst(8, i, i & 0x0F, 3));
+            assert_eq!(emu.get_register_value(i as u8), 0x00);
         }
     }
 }

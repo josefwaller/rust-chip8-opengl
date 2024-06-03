@@ -26,6 +26,8 @@ impl Chip8 {
             self.or_vx_vy(inst);
         } else if inst & 0xF00F == 0x8002 {
             self.and_vx_vy(inst);
+        } else if inst & 0xF00F == 0x8003 {
+            self.xor_vx_vy(inst);
         } else {
             panic!("Invalid opcode: '{:X}'", inst);
         }
@@ -76,6 +78,15 @@ impl Chip8 {
         let v_x = self.get_reg_idx(inst, 1);
         let v_y = self.get_reg_idx(inst, 2);
         self.registers[v_x] = self.registers[v_x] & self.registers[v_y];
+        if cfg!(debug_assertions) {
+            self.dump_state();
+        }
+    }
+
+    fn xor_vx_vy(&mut self, inst: u16) {
+        let v_x = self.get_reg_idx(inst, 1);
+        let v_y = self.get_reg_idx(inst, 2);
+        self.registers[v_x] = self.registers[v_x] ^ self.registers[v_y];
         if cfg!(debug_assertions) {
             self.dump_state();
         }
