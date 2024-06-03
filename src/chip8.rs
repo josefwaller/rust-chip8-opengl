@@ -20,14 +20,16 @@ impl Chip8 {
         }
         if inst & 0xF000 == 0x6000 {
             self.ld_vx_kk(inst);
-        } else if inst & 0xF00F == 0x8000 {
-            self.ld_vx_vy(inst);
-        } else if inst & 0xF00F == 0x8001 {
-            self.or_vx_vy(inst);
-        } else if inst & 0xF00F == 0x8002 {
-            self.and_vx_vy(inst);
-        } else if inst & 0xF00F == 0x8003 {
-            self.xor_vx_vy(inst);
+        } else if inst & 0xF000 == 0x8000 {
+            let vx = self.get_reg_idx(inst, 1);
+            let vy = self.get_reg_idx(inst, 2);
+            match inst & 0x000F {
+                0 => self.ld_vx_vy(vx, vy),
+                1 => self.or_vx_vy(vx, vy),
+                2 => self.and_vx_vy(vx, vy),
+                3 => self.xor_vx_vy(vx, vy),
+                _ => panic!("Invalid opcode: '{:X}'", inst),
+            }
         } else {
             panic!("Invalid opcode: '{:X}'", inst);
         }
@@ -56,36 +58,28 @@ impl Chip8 {
         self.registers[r] = kk;
     }
 
-    fn ld_vx_vy(&mut self, inst: u16) {
-        let v_x = self.get_reg_idx(inst, 1);
-        let v_y = self.get_reg_idx(inst, 2);
+    fn ld_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_y];
         if cfg!(debug_assertions) {
             self.dump_state();
         }
     }
 
-    fn or_vx_vy(&mut self, inst: u16) {
-        let v_x = self.get_reg_idx(inst, 1);
-        let v_y = self.get_reg_idx(inst, 2);
+    fn or_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] | self.registers[v_y];
         if cfg!(debug_assertions) {
             self.dump_state();
         }
     }
 
-    fn and_vx_vy(&mut self, inst: u16) {
-        let v_x = self.get_reg_idx(inst, 1);
-        let v_y = self.get_reg_idx(inst, 2);
+    fn and_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] & self.registers[v_y];
         if cfg!(debug_assertions) {
             self.dump_state();
         }
     }
 
-    fn xor_vx_vy(&mut self, inst: u16) {
-        let v_x = self.get_reg_idx(inst, 1);
-        let v_y = self.get_reg_idx(inst, 2);
+    fn xor_vx_vy(&mut self, v_x: usize, v_y: usize) {
         self.registers[v_x] = self.registers[v_x] ^ self.registers[v_y];
         if cfg!(debug_assertions) {
             self.dump_state();
