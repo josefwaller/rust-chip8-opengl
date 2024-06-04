@@ -87,12 +87,7 @@ impl Chip8 {
         } else {
             0
         };
-        let v = if self.registers[vy] > self.registers[vx] {
-            0xFF - (self.registers[vy] - self.registers[vx])
-        } else {
-            self.registers[vx] - self.registers[vy]
-        };
-        self.registers[vx] = v;
+        self.registers[vx] = self.registers[vx].wrapping_sub(self.registers[vy]);
     }
     fn shr(&mut self, v: usize) {
         self.registers[0xF] = if self.registers[v] & 0x01 == 1 { 1 } else { 0 };
