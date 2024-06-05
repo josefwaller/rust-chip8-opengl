@@ -12,7 +12,7 @@ mod tests {
             | ((c as u16 & 0x0F) << 4)
             | (d as u16 & 0x0F) as u16;
     }
-    fn rand_byte(max: u8) -> u16 {
+    fn rand_byte(max: u16) -> u16 {
         return rand::thread_rng().gen_range(0..max) as u16;
     }
     #[test]
@@ -172,6 +172,13 @@ mod tests {
             );
         });
     }
+    #[test]
+    fn test_jmp() {
+        let mut emu = Chip8::new();
+        let v = rand_byte(0xFFF);
+        emu.step(0x1000 | v);
+        assert_eq!(emu.get_program_counter(), v);
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
@@ -186,7 +193,7 @@ mod tests {
                 vy += 1;
             }
             let val_x = rand_byte(0xFE) as u8 + 1;
-            let val_y = rand_byte(val_x) as u8;
+            let val_y = rand_byte(val_x as u16) as u8;
             emu.step(build_inst(6, vx, val_x >> 4, val_x));
             emu.step(build_inst(6, vy, val_y >> 4, val_y));
             // Set VF to something other than 1 or 0

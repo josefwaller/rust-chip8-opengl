@@ -3,6 +3,9 @@ pub struct Chip8 {
     screen_buffer: [[bool; 32]; 64],
     // Registers (1 through F)
     registers: [u8; 16],
+    // Program Counter
+    // Really should be u12
+    pc: u16,
 }
 
 impl Chip8 {
@@ -10,6 +13,7 @@ impl Chip8 {
         return Chip8 {
             screen_buffer: [[false; 32]; 64],
             registers: [0x00; 16],
+            pc: 0,
         };
     }
     pub fn step(&mut self, inst: u16) {
@@ -18,29 +22,40 @@ impl Chip8 {
             println!("Initial state:");
             self.dump_state();
         }
-        if inst & 0xF000 == 0x6000 {
-            self.ld_vx_kk(inst);
-        } else if inst & 0xF000 == 0x8000 {
-            let vx = self.get_reg_idx(inst, 1);
-            let vy = self.get_reg_idx(inst, 2);
-            match inst & 0x000F {
-                0 => self.ld_vx_vy(vx, vy),
-                1 => self.or_vx_vy(vx, vy),
-                2 => self.and_vx_vy(vx, vy),
-                3 => self.xor_vx_vy(vx, vy),
-                4 => self.add_vx_vy(vx, vy),
-                5 => self.sub_vx_vy(vx, vy),
-                6 => self.shr(vx),
-                7 => self.subn(vx, vy),
-                0xE => self.shl(vx),
-                _ => panic!("Invalid opcode: '{:X}'", inst),
+        // Match first digit of opcode
+        match inst & 0xF000 {
+            0x0000 => match inst & 0x0FFF {
+                0x0E0 => self.clr(),
+                0x0EE => self.ret(),
+                _ => self.unknown_opcode_panic(inst),
+            },
+            0x1000 => self.jmp(inst),
+            0x6000 => self.ld_vx_kk(inst),
+            0x8000 => {
+                let vx = self.get_reg_idx(inst, 1);
+                let vy = self.get_reg_idx(inst, 2);
+                match inst & 0x000F {
+                    0 => self.ld_vx_vy(vx, vy),
+                    1 => self.or_vx_vy(vx, vy),
+                    2 => self.and_vx_vy(vx, vy),
+                    3 => self.xor_vx_vy(vx, vy),
+                    4 => self.add_vx_vy(vx, vy),
+                    5 => self.sub_vx_vy(vx, vy),
+                    6 => self.shr(vx),
+                    7 => self.subn(vx, vy),
+                    0xE => self.shl(vx),
+                    _ => self.unknown_opcode_panic(inst),
+                }
             }
-        } else {
-            panic!("Invalid opcode: '{:X}'", inst);
+            _ => self.unknown_opcode_panic(inst),
         }
         if cfg!(debug_assertions) {
             self.dump_state();
         }
+    }
+
+    fn unknown_opcode_panic(&self, opcode: u16) {
+        panic!("Unknown opcode '{:X}' provided!", opcode);
     }
 
     // Get index of the register given the instruction
@@ -111,8 +126,18 @@ impl Chip8 {
         };
         self.registers[v] = self.registers[v] << 1;
     }
+    fn clr(&mut self) {
+        self.screen_buffer = [[false; 32]; 64];
+    }
+    fn ret(&mut self) {}
+    fn jmp(&mut self, inst: u16) {
+        self.pc = inst & 0x0FFF;
+    }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
+    }
+    pub fn get_program_counter(&mut self) -> u16 {
+        return self.pc;
     }
 }
