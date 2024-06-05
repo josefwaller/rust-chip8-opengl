@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "assert_hex"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7010f1430f0fc8ca80bdb5e5d074db68776a2e268ec6cf80b53712d3ea4bca7"
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -65,6 +71,7 @@ dependencies = [
 name = "rust-chip8-opengl"
 version = "0.1.0"
 dependencies = [
+ "assert_hex",
  "rand",
 ]
 

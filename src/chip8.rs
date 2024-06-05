@@ -8,6 +8,10 @@ pub struct Chip8 {
     // Stack and stack pointer
     stack: [u16; 16],
     sp: usize,
+    // Memory
+    mem: [u8; 0x1000],
+    // I (index register)
+    i: u16,
 }
 
 impl Chip8 {
@@ -15,9 +19,11 @@ impl Chip8 {
         return Chip8 {
             screen_buffer: [[false; 32]; 64],
             registers: [0x00; 16],
-            pc: 0,
+            pc: 0x200,
             stack: [0x00; 16],
             sp: 0,
+            mem: [0x00; 0x1000],
+            i: 0,
         };
     }
     /*
@@ -59,6 +65,12 @@ impl Chip8 {
                     _ => self.unknown_opcode_panic(inst),
                 }
             }
+            0xA000 => self.ld_i(inst),
+            0xF000 => match inst & 0x00FF {
+                0x55 => self.store_at_i(inst),
+                0x65 => self.load_from_i(inst),
+                _ => self.unknown_opcode_panic(inst),
+            },
             _ => self.unknown_opcode_panic(inst),
         }
         if cfg!(debug_assertions) {
@@ -84,7 +96,18 @@ impl Chip8 {
         }
         println!("");
         println!("Stack: {:X?}", self.stack);
-        println!("PC = {:X?}, SP = {:X?}", self.pc, self.sp);
+        println!(
+            "PC = {:X?}, SP = {:X?}, I = {:X?}",
+            self.pc, self.sp, self.i
+        );
+        print!("Memory:");
+        self.mem.iter().enumerate().for_each(|(i, v)| {
+            if i % 0x40 == 0 {
+                print!("\n{:03X}: ", i);
+            }
+            print!("{:02X?}", v);
+        });
+        println!("");
     }
 
     fn ld_vx_kk(&mut self, inst: u16) {
@@ -163,8 +186,6 @@ impl Chip8 {
         }
     }
     fn se_reg(&mut self, inst: u16) {
-        println!("{}", self.registers[self.get_reg_idx(inst, 1)]);
-        println!("{}", self.registers[self.get_reg_idx(inst, 2)]);
         if self.registers[self.get_reg_idx(inst, 1)] == self.registers[self.get_reg_idx(inst, 2)] {
             self.pc += 1;
         }
@@ -174,11 +195,32 @@ impl Chip8 {
             self.pc += 1;
         }
     }
+    fn ld_i(&mut self, inst: u16) {
+        self.i = (inst & 0x0FFF) as u16;
+    }
+    fn load_from_i(&mut self, inst: u16) {
+        let x = ((inst >> 8) & 0xF) + 1;
+        for j in 0..x {
+            self.registers[j as usize] = self.mem[(self.i + j) as usize];
+        }
+    }
+    fn store_at_i(&mut self, inst: u16) {
+        let x = ((inst >> 8) & 0xF) + 1;
+        for j in 0..x {
+            self.mem[(self.i + j) as usize] = self.registers[j as usize];
+        }
+    }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
     }
     pub fn get_program_counter(&mut self) -> usize {
         return self.pc;
+    }
+    pub fn get_i(&mut self) -> u16 {
+        return self.i;
+    }
+    pub fn get_mem_at(&mut self, addr: usize) -> u8 {
+        return self.mem[addr];
     }
 }
