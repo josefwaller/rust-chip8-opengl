@@ -35,6 +35,9 @@ impl Chip8 {
             },
             0x1000 => self.jmp(inst),
             0x2000 => self.call(inst),
+            0x3000 => self.se_const(inst),
+            0x4000 => self.sne(inst),
+            0x5000 => self.se_reg(inst),
             0x6000 => self.ld_vx_kk(inst),
             0x8000 => {
                 let vx = self.get_reg_idx(inst, 1);
@@ -55,6 +58,7 @@ impl Chip8 {
             _ => self.unknown_opcode_panic(inst),
         }
         if cfg!(debug_assertions) {
+            println!("Post state:");
             self.dump_state();
         }
     }
@@ -148,6 +152,23 @@ impl Chip8 {
         self.sp += 1;
         // Maybe minus one here
         self.pc = (inst & 0x0FFF) as usize;
+    }
+    fn se_const(&mut self, inst: u16) {
+        if self.registers[self.get_reg_idx(inst, 1)] as u16 == inst & 0xFF {
+            self.pc += 1;
+        }
+    }
+    fn se_reg(&mut self, inst: u16) {
+        println!("{}", self.registers[self.get_reg_idx(inst, 1)]);
+        println!("{}", self.registers[self.get_reg_idx(inst, 2)]);
+        if self.registers[self.get_reg_idx(inst, 1)] == self.registers[self.get_reg_idx(inst, 2)] {
+            self.pc += 1;
+        }
+    }
+    fn sne(&mut self, inst: u16) {
+        if self.registers[self.get_reg_idx(inst, 1)] as u16 != inst & 0xFF {
+            self.pc += 1;
+        }
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {

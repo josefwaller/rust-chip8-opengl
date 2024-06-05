@@ -203,6 +203,55 @@ mod tests {
         }
         assert_eq!(emu.get_program_counter(), 0);
     }
+    #[test]
+    fn test_se_const() {
+        stress_test(|emu, x, y, val_x, val_y| {
+            let pc = emu.get_program_counter();
+            emu.step(build_inst(3, x, val_x >> 4, val_x));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+            emu.step(build_inst(3, x, val_y >> 4, val_y));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+            emu.step(build_inst(3, y, val_y >> 4, val_y));
+            assert_eq!(emu.get_program_counter(), pc + 2);
+            emu.step(build_inst(3, y, val_x >> 4, val_x));
+            assert_eq!(emu.get_program_counter(), pc + 2);
+        });
+    }
+    #[test]
+    fn test_se_reg() {
+        stress_test(|emu, x, y, val_x, val_y| {
+            let pc = emu.get_program_counter();
+            emu.step(build_inst(5, x, y, 0));
+            assert_eq!(emu.get_program_counter(), pc);
+            emu.step(build_inst(6, x, val_y >> 4, val_y));
+            emu.step(build_inst(5, x, y, 0));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+            emu.step(build_inst(5, y, x, 0));
+            assert_eq!(emu.get_program_counter(), pc + 2);
+        })
+    }
+    #[test]
+    fn test_se_reg_same_reg() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            let pc = emu.get_program_counter();
+            emu.step(build_inst(5, x, x, 0));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+        })
+    }
+    #[test]
+    fn test_sne() {
+        stress_test(|emu, x, y, val_x, val_y| {
+            let pc = emu.get_program_counter();
+            emu.step(build_inst(4, x, val_x >> 4, val_x));
+            assert_eq!(emu.get_program_counter(), pc);
+            emu.step(build_inst(4, x, val_y >> 4, val_y));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+            emu.step(build_inst(4, y, val_y >> 4, val_y));
+            assert_eq!(emu.get_program_counter(), pc + 1);
+            emu.step(build_inst(4, y, val_x >> 4, val_x));
+            assert_eq!(emu.get_program_counter(), pc + 2);
+        });
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
