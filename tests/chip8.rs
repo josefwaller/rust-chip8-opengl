@@ -137,6 +137,41 @@ mod tests {
             assert_eq!(emu.get_register_value(vy), val_y);
         });
     }
+    #[test]
+    fn test_subn() {
+        stress_test(|emu, x, y, val_x, val_y| {
+            emu.step(build_inst(8, y, x, 7));
+            assert_eq!(emu.get_register_value(y), val_x - val_y);
+            assert_eq!(emu.get_register_value(0xF), 0x0);
+        })
+    }
+    #[test]
+    fn test_subn_same_register() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            emu.step(build_inst(8, x, x, 7));
+            assert_eq!(emu.get_register_value(x), 0);
+            assert_eq!(emu.get_register_value(0xF), 0);
+        });
+    }
+    #[test]
+    fn test_subn_underflow() {
+        stress_test(|emu, x, y, val_x, val_y| {
+            emu.step(build_inst(8, x, y, 7));
+            assert_eq!(emu.get_register_value(x), val_y.wrapping_sub(val_x));
+            assert_eq!(emu.get_register_value(0xF), 0x1);
+        })
+    }
+    #[test]
+    fn test_shl() {
+        stress_test(|emu, x, y, val_x, _val_y| {
+            emu.step(build_inst(8, x, y, 0xE));
+            assert_eq!(emu.get_register_value(x), val_x << 1);
+            assert_eq!(
+                emu.get_register_value(0xF),
+                if val_x & 0x80 == 0x80 { 1 } else { 0 }
+            );
+        });
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them

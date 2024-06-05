@@ -31,6 +31,8 @@ impl Chip8 {
                 4 => self.add_vx_vy(vx, vy),
                 5 => self.sub_vx_vy(vx, vy),
                 6 => self.shr(vx),
+                7 => self.subn(vx, vy),
+                0xE => self.shl(vx),
                 _ => panic!("Invalid opcode: '{:X}'", inst),
             }
         } else {
@@ -92,6 +94,22 @@ impl Chip8 {
     fn shr(&mut self, v: usize) {
         self.registers[0xF] = if self.registers[v] & 0x01 == 1 { 1 } else { 0 };
         self.registers[v] = self.registers[v] >> 1;
+    }
+    fn subn(&mut self, vx: usize, vy: usize) {
+        self.registers[0xF] = if self.registers[vx] > self.registers[vy] {
+            1
+        } else {
+            0
+        };
+        self.registers[vx] = self.registers[vy].wrapping_sub(self.registers[vx]);
+    }
+    fn shl(&mut self, v: usize) {
+        self.registers[0xF] = if self.registers[v] & 0x80 == 0x80 {
+            1
+        } else {
+            0
+        };
+        self.registers[v] = self.registers[v] << 1;
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
