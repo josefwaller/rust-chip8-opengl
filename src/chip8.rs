@@ -20,7 +20,11 @@ impl Chip8 {
             sp: 0,
         };
     }
-    pub fn step(&mut self, inst: u16) {
+    /*
+     * Executes a single instruction
+     * Does not increment PC or affect DT or ST
+     */
+    pub fn execute(&mut self, inst: u16) {
         if cfg!(debug_assertions) {
             println!("Inst is {:X}", inst);
             println!("Initial state:");
