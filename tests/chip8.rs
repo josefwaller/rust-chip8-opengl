@@ -147,7 +147,7 @@ mod tests {
     }
     #[test]
     fn test_subn_same_register() {
-        stress_test(|emu, x, _y, val_x, _val_y| {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
             emu.step(build_inst(8, x, x, 7));
             assert_eq!(emu.get_register_value(x), 0);
             assert_eq!(emu.get_register_value(0xF), 0);
@@ -177,7 +177,31 @@ mod tests {
         let mut emu = Chip8::new();
         let v = rand_byte(0xFFF);
         emu.step(0x1000 | v);
-        assert_eq!(emu.get_program_counter(), v);
+        assert_eq!(emu.get_program_counter(), v as usize);
+    }
+    #[test]
+    fn test_call_ret() {
+        let mut emu = Chip8::new();
+        let addr = rand_byte(0x0FFF);
+        emu.step(addr | 0x2000);
+        assert_eq!(emu.get_program_counter(), addr as usize);
+        emu.step(0x00EE);
+        assert_eq!(emu.get_program_counter(), 0 as usize);
+    }
+    #[test]
+    fn stress_test_call_ret() {
+        let mut emu = Chip8::new();
+        let mut addrs = [0 as usize; 16];
+        for i in 0..16 {
+            addrs[i] = rand_byte(0xFFF) as usize;
+            emu.step(addrs[i] as u16 | 0x2000);
+            assert_eq!(emu.get_program_counter(), addrs[i]);
+        }
+        for i in (0..16).rev() {
+            assert_eq!(emu.get_program_counter(), addrs[i]);
+            emu.step(0x00EE);
+        }
+        assert_eq!(emu.get_program_counter(), 0);
     }
 
     /*
