@@ -98,6 +98,7 @@ impl Chip8 {
             }
             0x9000 => self.sne_vx_vy(inst),
             0xA000 => self.ld_i(inst),
+            0xB000 => self.jmp_v0(inst),
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
@@ -206,6 +207,9 @@ impl Chip8 {
     }
     fn jmp(&mut self, inst: u16) {
         self.pc = ((inst & 0x0FFF) - 2) as usize;
+    }
+    fn jmp_v0(&mut self, inst: u16) {
+        self.pc = ((inst & 0x0FFF) + self.registers[0] as u16) as usize - 2;
     }
     fn call(&mut self, inst: u16) {
         self.stack[self.sp] = self.pc as u16;

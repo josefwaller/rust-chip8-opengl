@@ -352,6 +352,22 @@ mod tests {
             assert_eq_hex!(emu.get_program_counter(), pc);
         })
     }
+    #[test]
+    fn test_jmp_v0() {
+        let mut emu = Chip8::new();
+        for _ in 0..16 {
+            let addr = rand_byte(0xFFF);
+            let v = rand_byte(0xFF) as u8;
+            emu.execute(build_inst(6, 0, v >> 4, v));
+            emu.execute(build_inst(
+                0xB,
+                (addr >> 8) as u8,
+                (addr >> 4) as u8,
+                addr as u8,
+            ));
+            assert_eq_hex!(emu.get_program_counter(), (addr + v as u16) as usize - 2)
+        }
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
