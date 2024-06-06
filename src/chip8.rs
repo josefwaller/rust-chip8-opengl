@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 pub struct Chip8 {
     // Buffer for the screen
     screen_buffer: [[bool; 32]; 64],
@@ -12,6 +14,10 @@ pub struct Chip8 {
     mem: [u8; 0x1000],
     // I (index register)
     i: u16,
+    // Delay timer
+    dt: u8,
+    // Sound timer
+    st: u8,
 }
 
 impl Chip8 {
@@ -24,7 +30,31 @@ impl Chip8 {
             sp: 0,
             mem: [0x00; 0x1000],
             i: 0,
+            dt: 0,
+            st: 0,
         };
+    }
+    /*
+     * Load a program into memory and execute it
+     * Simulates the PC, DT and ST and updates the memory
+     */
+    pub fn run_program(&mut self, program: &[u8]) {
+        self.mem[0x200..(0x200 + program.len())].clone_from_slice(program);
+        self.pc = 0x200;
+        self.sp = 0x0;
+        loop {
+            let now = Instant::now();
+            let pc = self.pc;
+            self.execute(((self.mem[pc] as u16) << 8) | self.mem[pc + 1] as u16);
+            // Hack - exit the program if PC is set to 0
+            if self.pc == 0 {
+                break;
+            }
+            self.pc += 2;
+            let dt: u8 = (now.elapsed().as_nanos() * 60 / 1000000) as u8;
+            self.dt = self.dt.saturating_sub(dt);
+            self.st = self.st.saturating_sub(dt);
+        }
     }
     /*
      * Executes a single instruction
@@ -49,6 +79,7 @@ impl Chip8 {
             0x4000 => self.sne(inst),
             0x5000 => self.se_reg(inst),
             0x6000 => self.ld_vx_kk(inst),
+            0x7000 => self.add_vx_kk(inst),
             0x8000 => {
                 let vx = self.get_reg_idx(inst, 1);
                 let vy = self.get_reg_idx(inst, 2);
@@ -69,6 +100,7 @@ impl Chip8 {
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
+                0x1E => self.add_i_vx(inst),
                 _ => self.unknown_opcode_panic(inst),
             },
             _ => self.unknown_opcode_panic(inst),
@@ -80,7 +112,7 @@ impl Chip8 {
     }
 
     fn unknown_opcode_panic(&self, opcode: u16) {
-        panic!("Unknown opcode '{:X}' provided!", opcode);
+        panic!("Unknown opcode '{:04X}' provided!", opcode);
     }
 
     // Get index of the register given the instruction
@@ -97,8 +129,8 @@ impl Chip8 {
         println!("");
         println!("Stack: {:X?}", self.stack);
         println!(
-            "PC = {:X?}, SP = {:X?}, I = {:X?}",
-            self.pc, self.sp, self.i
+            "PC = {:X?}, SP = {:X?}, I = {:X?}, DT = {:X?}, ST = {:X?}",
+            self.pc, self.sp, self.i, self.dt, self.st
         );
         print!("Memory:");
         self.mem.iter().enumerate().for_each(|(i, v)| {
@@ -172,27 +204,26 @@ impl Chip8 {
         self.pc = self.stack[self.sp] as usize;
     }
     fn jmp(&mut self, inst: u16) {
-        self.pc = (inst & 0x0FFF) as usize;
+        self.pc = ((inst & 0x0FFF) - 2) as usize;
     }
     fn call(&mut self, inst: u16) {
         self.stack[self.sp] = self.pc as u16;
         self.sp += 1;
-        // Maybe minus one here
         self.pc = (inst & 0x0FFF) as usize;
     }
     fn se_const(&mut self, inst: u16) {
         if self.registers[self.get_reg_idx(inst, 1)] as u16 == inst & 0xFF {
-            self.pc += 1;
+            self.pc += 2;
         }
     }
     fn se_reg(&mut self, inst: u16) {
         if self.registers[self.get_reg_idx(inst, 1)] == self.registers[self.get_reg_idx(inst, 2)] {
-            self.pc += 1;
+            self.pc += 2;
         }
     }
     fn sne(&mut self, inst: u16) {
         if self.registers[self.get_reg_idx(inst, 1)] as u16 != inst & 0xFF {
-            self.pc += 1;
+            self.pc += 2;
         }
     }
     fn ld_i(&mut self, inst: u16) {
@@ -209,6 +240,14 @@ impl Chip8 {
         for j in 0..x {
             self.mem[(self.i + j) as usize] = self.registers[j as usize];
         }
+    }
+    fn add_i_vx(&mut self, inst: u16) {
+        let x = self.get_reg_idx(inst, 1);
+        self.i = self.i.wrapping_add(self.registers[x] as u16);
+    }
+    fn add_vx_kk(&mut self, inst: u16) {
+        let x = self.get_reg_idx(inst, 1);
+        self.registers[x] = self.registers[x].wrapping_add((inst & 0xFF) as u8);
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {

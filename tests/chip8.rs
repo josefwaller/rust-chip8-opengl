@@ -180,7 +180,7 @@ mod tests {
         let mut emu = Chip8::new();
         let v = rand_byte(0xFFF);
         emu.execute(0x1000 | v);
-        assert_eq_hex!(emu.get_program_counter(), v as usize);
+        assert_eq_hex!(emu.get_program_counter(), (v - 2) as usize);
     }
     #[test]
     fn test_call_ret() {
@@ -211,13 +211,13 @@ mod tests {
         stress_test(|emu, x, y, val_x, val_y| {
             let pc = emu.get_program_counter();
             emu.execute(build_inst(3, x, val_x >> 4, val_x));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
             emu.execute(build_inst(3, x, val_y >> 4, val_y));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
             emu.execute(build_inst(3, y, val_y >> 4, val_y));
-            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
             emu.execute(build_inst(3, y, val_x >> 4, val_x));
-            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
         });
     }
     #[test]
@@ -228,9 +228,9 @@ mod tests {
             assert_eq_hex!(emu.get_program_counter(), pc);
             emu.execute(build_inst(6, x, val_y >> 4, val_y));
             emu.execute(build_inst(5, x, y, 0));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
-            emu.execute(build_inst(5, y, x, 0));
             assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            emu.execute(build_inst(5, y, x, 0));
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
         })
     }
     #[test]
@@ -238,7 +238,7 @@ mod tests {
         stress_test(|emu, x, _y, _val_x, _val_y| {
             let pc = emu.get_program_counter();
             emu.execute(build_inst(5, x, x, 0));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
         })
     }
     #[test]
@@ -248,11 +248,11 @@ mod tests {
             emu.execute(build_inst(4, x, val_x >> 4, val_x));
             assert_eq_hex!(emu.get_program_counter(), pc);
             emu.execute(build_inst(4, x, val_y >> 4, val_y));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
-            emu.execute(build_inst(4, y, val_y >> 4, val_y));
-            assert_eq_hex!(emu.get_program_counter(), pc + 1);
-            emu.execute(build_inst(4, y, val_x >> 4, val_x));
             assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            emu.execute(build_inst(4, y, val_y >> 4, val_y));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            emu.execute(build_inst(4, y, val_x >> 4, val_x));
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
         });
     }
     #[test]
@@ -265,7 +265,7 @@ mod tests {
     }
     #[test]
     fn test_ld_i_vx() {
-        stress_test(|emu, x, _y, val_x, val_y| {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
             // We are loading up to 16 values into memory so max is a bit less
             let addr = rand_byte(0xFF0);
             emu.execute(build_inst(
@@ -323,6 +323,14 @@ mod tests {
                 assert_eq_hex!(exp_mem[j], emu.get_mem_at(i as usize + j));
                 assert_eq_hex!(exp_mem[j], emu.get_register_value(j as u8));
             }
+        })
+    }
+    #[test]
+    fn test_add_i_vx() {
+        stress_test(|emu, x, _y, val_x, val_y| {
+            emu.execute(0xA000 | val_y as u16);
+            emu.execute(build_inst(0xF, x, 0x1, 0xE));
+            assert_eq_hex!(emu.get_i(), val_x as u16 + val_y as u16);
         })
     }
 
