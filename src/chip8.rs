@@ -1,5 +1,7 @@
 use std::time::Instant;
 
+use rand::Rng;
+
 pub struct Chip8 {
     // Buffer for the screen
     screen_buffer: [[bool; 32]; 64],
@@ -99,6 +101,7 @@ impl Chip8 {
             0x9000 => self.sne_vx_vy(inst),
             0xA000 => self.ld_i(inst),
             0xB000 => self.jmp_v0(inst),
+            0xC000 => self.rand(inst),
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
@@ -260,6 +263,10 @@ impl Chip8 {
     fn add_vx_kk(&mut self, inst: u16) {
         let x = self.get_reg_idx(inst, 1);
         self.registers[x] = self.registers[x].wrapping_add((inst & 0xFF) as u8);
+    }
+    fn rand(&mut self, inst: u16) {
+        let r = rand::thread_rng().gen_range(0..0xFF) & (inst & 0xFF);
+        self.registers[self.get_reg_idx(inst, 1)] = r as u8;
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {

@@ -368,6 +368,15 @@ mod tests {
             assert_eq_hex!(emu.get_program_counter(), (addr + v as u16) as usize - 2)
         }
     }
+    #[test]
+    fn test_rand() {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
+            emu.execute(build_inst(0xC, x, 0x0, 0xF));
+            assert_eq_hex!(emu.get_register_value(x) & 0xF0, 0);
+            emu.execute(build_inst(0xC, x, 0xF, 0x0));
+            assert_eq_hex!(emu.get_register_value(x) & 0x0F, 0);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
