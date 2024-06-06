@@ -76,7 +76,7 @@ impl Chip8 {
             0x1000 => self.jmp(inst),
             0x2000 => self.call(inst),
             0x3000 => self.se_const(inst),
-            0x4000 => self.sne(inst),
+            0x4000 => self.sne_vx_kk(inst),
             0x5000 => self.se_reg(inst),
             0x6000 => self.ld_vx_kk(inst),
             0x7000 => self.add_vx_kk(inst),
@@ -96,6 +96,7 @@ impl Chip8 {
                     _ => self.unknown_opcode_panic(inst),
                 }
             }
+            0x9000 => self.sne_vx_vy(inst),
             0xA000 => self.ld_i(inst),
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
@@ -221,8 +222,15 @@ impl Chip8 {
             self.pc += 2;
         }
     }
-    fn sne(&mut self, inst: u16) {
+    fn sne_vx_kk(&mut self, inst: u16) {
         if self.registers[self.get_reg_idx(inst, 1)] as u16 != inst & 0xFF {
+            self.pc += 2;
+        }
+    }
+    fn sne_vx_vy(&mut self, inst: u16) {
+        let x = self.registers[self.get_reg_idx(inst, 1)];
+        let y = self.registers[self.get_reg_idx(inst, 2)];
+        if x != y {
             self.pc += 2;
         }
     }

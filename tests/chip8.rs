@@ -333,6 +333,25 @@ mod tests {
             assert_eq_hex!(emu.get_i(), val_x as u16 + val_y as u16);
         })
     }
+    #[test]
+    fn test_sne_vx_vy() {
+        stress_test(|emu, x, y, _val_x, _val_y| {
+            let pc = emu.get_program_counter();
+            emu.execute(build_inst(0x9, x, y, 0));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            emu.execute(build_inst(8, x, y, 0));
+            emu.execute(build_inst(0x9, x, y, 0));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+        })
+    }
+    #[test]
+    fn test_sne_vx_vy_same_register() {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
+            let pc = emu.get_program_counter();
+            emu.execute(build_inst(0x9, x, x, 0));
+            assert_eq_hex!(emu.get_program_counter(), pc);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
