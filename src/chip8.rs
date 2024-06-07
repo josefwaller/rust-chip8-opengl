@@ -2,9 +2,12 @@ use std::time::Instant;
 
 use rand::Rng;
 
+const SCREEN_WIDTH: usize = 64;
+const SCREEN_HEIGHT: usize = 32;
+
 pub struct Chip8 {
     // Buffer for the screen
-    screen_buffer: [[bool; 32]; 64],
+    screen_buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
     // Registers (1 through F)
     registers: [u8; 16],
     // Program Counter
@@ -25,7 +28,7 @@ pub struct Chip8 {
 impl Chip8 {
     pub fn new() -> Chip8 {
         return Chip8 {
-            screen_buffer: [[false; 32]; 64],
+            screen_buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
             registers: [0x00; 16],
             pc: 0x200,
             stack: [0x00; 16],
@@ -40,8 +43,11 @@ impl Chip8 {
      * Load a program into memory and execute it
      * Simulates the PC, DT and ST and updates the memory
      */
-    pub fn run_program(&mut self, program: &[u8]) {
-        self.mem[0x200..(0x200 + program.len())].clone_from_slice(program);
+    pub fn run_program(&mut self, program: &[u16]) {
+        (0..program.len()).for_each(|i| {
+            self.mem[0x200 + 2 * i] = (program[i] >> 8) as u8;
+            self.mem[0x200 + 2 * i + 1] = program[i] as u8;
+        });
         self.pc = 0x200;
         self.sp = 0x0;
         loop {
@@ -102,6 +108,7 @@ impl Chip8 {
             0xA000 => self.ld_i(inst),
             0xB000 => self.jmp_v0(inst),
             0xC000 => self.rand(inst),
+            0xD000 => self.draw(inst),
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
@@ -143,6 +150,14 @@ impl Chip8 {
                 print!("\n{:03X}: ", i);
             }
             print!("{:02X?}", v);
+        });
+        println!("");
+        print!("Screen:");
+        self.screen_buffer.iter().enumerate().for_each(|(i, s)| {
+            if i % 64 == 0 {
+                println!("");
+            }
+            print!("{}", if self.screen_buffer[i] { 1 } else { 0 });
         });
         println!("");
     }
@@ -202,7 +217,7 @@ impl Chip8 {
         self.registers[v] = self.registers[v] << 1;
     }
     fn clr(&mut self) {
-        self.screen_buffer = [[false; 32]; 64];
+        self.screen_buffer = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
     }
     fn ret(&mut self) {
         self.sp -= 1;
@@ -268,6 +283,24 @@ impl Chip8 {
         let r = rand::thread_rng().gen_range(0..0xFF) & (inst & 0xFF);
         self.registers[self.get_reg_idx(inst, 1)] = r as u8;
     }
+    fn draw(&mut self, inst: u16) {
+        let x = self.registers[self.get_reg_idx(inst, 1)];
+        let y = self.registers[self.get_reg_idx(inst, 2)];
+        let n = self.get_reg_idx(inst, 3);
+        // XOR data onto screen
+        for j in 0..(n + 1) {
+            let val = self.mem[self.i as usize + j];
+            for k in 0..8 {
+                let coord: usize = ((y as usize + j) % SCREEN_HEIGHT) * SCREEN_WIDTH
+                    + (x as usize + k) % SCREEN_WIDTH;
+                let p = (val << k) & 0x80 != 0; // Get MSB
+                if p && self.screen_buffer[coord] {
+                    self.registers[0xF] = 1;
+                }
+                self.screen_buffer[coord] = p ^ self.screen_buffer[coord];
+            }
+        }
+    }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
         return self.registers[register as usize];
@@ -280,5 +313,9 @@ impl Chip8 {
     }
     pub fn get_mem_at(&mut self, addr: usize) -> u8 {
         return self.mem[addr];
+    }
+    pub fn get_pixel_at(&self, x: u8, y: u8) -> bool {
+        return self.screen_buffer
+            [((x as usize % 64) + y as usize * 64) % self.screen_buffer.len()];
     }
 }

@@ -377,6 +377,41 @@ mod tests {
             assert_eq_hex!(emu.get_register_value(x) & 0x0F, 0);
         })
     }
+    #[test]
+    fn test_drw() {
+        stress_test(|emu, x, y, _val_x, _val_y| {
+            // Choose a random amount to XOR
+            let n = rand_byte(64 / 8) as u8;
+            // Set mem[I] to something
+            let mut spr = vec![];
+            for i in 0..n {
+                let v = rand_byte(0xFF) as u8;
+                spr.push(v);
+                emu.execute(build_inst(0x6, i as u8, v >> 4, v));
+            }
+            emu.execute(build_inst(0xF, n, 0x5, 0x5));
+            // Choose a random location
+            let px: u8 = rand_byte(64) as u8;
+            let py = rand_byte(32) as u8;
+            // Save what was in the screen before
+            let prev_screen: Vec<bool> = (0..n as usize * 8)
+                .map(|i| emu.get_pixel_at(px + (i % 8) as u8, py + (i / 8) as u8))
+                .collect();
+            // Load into VX VY
+            emu.execute(build_inst(0x6, x, px >> 4, px));
+            emu.execute(build_inst(0x6, y, py >> 4, py));
+            // Draw
+            emu.execute(build_inst(0xD, x, y, n));
+            // Check memory was XORed
+            (0..n as usize * 8).for_each(|i| {
+                let v = (spr[i as usize / 8] << (i % 8) & 0x80) != 0;
+                assert_eq_hex!(
+                    emu.get_pixel_at(px + (i % 8) as u8, py + (i / 8) as u8),
+                    prev_screen[i as usize] ^ v
+                );
+            })
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
