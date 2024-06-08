@@ -9,7 +9,7 @@ mod tests {
     fn test_fibinnaci() {
         let mut emu = Chip8::new();
         // Simple program to compute the first 100 fibinnaci sequence
-        let program: [u16; 14] = [
+        const PROGRAM: [u16; 14] = [
             0x6001, // LD V0 0x01
             0x6101, // LD V1 0x01
             0x6201, // LD V2, 0x01
@@ -25,7 +25,11 @@ mod tests {
             0x120A, // JMP start of loop
             0x1002, // JMP 0 (Ends program)
         ];
-        emu.run_program(&program);
+        // run program
+        emu.load_program(&PROGRAM);
+        while emu.get_program_counter() != 0x002 {
+            emu.step();
+        }
         // Check the memory
         let mut a = 1;
         let mut b = 1;
@@ -39,17 +43,20 @@ mod tests {
     #[test]
     fn test_draw_smiley() {
         let mut emu = Chip8::new();
-        const program: [u16; 9] = [
+        const PROGRAM: [u16; 9] = [
             0x6042, 0x6100, 0x6242, 0x633C, 0xA400, 0xF355, 0xA400, 0xD454, 0x1002,
         ];
-        emu.run_program(&program);
-        const smiley: [[bool; 8]; 4] = [
+        emu.load_program(&PROGRAM);
+        while emu.get_program_counter() != 0x002 {
+            emu.step();
+        }
+        const SMILEY: [[bool; 8]; 4] = [
             [false, true, false, false, false, false, true, false],
             [false; 8],
             [false, true, false, false, false, false, true, false],
             [false, false, true, true, true, true, false, false],
         ];
-        smiley.iter().enumerate().for_each(|(y, r)| {
+        SMILEY.iter().enumerate().for_each(|(y, r)| {
             r.iter()
                 .enumerate()
                 .for_each(|(x, v)| assert_eq_hex!(emu.get_pixel_at(x as u8, y as u8), v.to_owned()))

@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use rand::Rng;
 
 const SCREEN_WIDTH: usize = 64;
@@ -40,29 +38,28 @@ impl Chip8 {
         };
     }
     /*
-     * Load a program into memory and execute it
-     * Simulates the PC, DT and ST and updates the memory
+     * Load a program into memory
      */
-    pub fn run_program(&mut self, program: &[u16]) {
+    pub fn load_program(&mut self, program: &[u16]) {
         (0..program.len()).for_each(|i| {
             self.mem[0x200 + 2 * i] = (program[i] >> 8) as u8;
             self.mem[0x200 + 2 * i + 1] = program[i] as u8;
         });
-        self.pc = 0x200;
-        self.sp = 0x0;
-        loop {
-            let now = Instant::now();
-            let pc = self.pc;
-            self.execute(((self.mem[pc] as u16) << 8) | self.mem[pc + 1] as u16);
-            // Hack - exit the program if PC is set to 0
-            if self.pc == 0 {
-                break;
-            }
-            self.pc += 2;
-            let dt: u8 = (now.elapsed().as_nanos() * 60 / 1000000) as u8;
-            self.dt = self.dt.saturating_sub(dt);
-            self.st = self.st.saturating_sub(dt);
-        }
+    }
+    /*
+     * Perform the next step in whatever program has been loaded into memory
+     */
+    pub fn step(&mut self) {
+        self.execute(((self.mem[self.pc] as u16) << 8) | self.mem[self.pc + 1] as u16);
+        self.pc += 2;
+    }
+    /*
+     * Update the DT and ST registers given the amount of time that has elapsed in nanoseconds
+     */
+    pub fn update_timers(&mut self, dt_nanos: u64) {
+        let change: u8 = (dt_nanos * 60 / 1000000) as u8;
+        self.dt = self.dt.saturating_sub(change);
+        self.st = self.st.saturating_sub(change);
     }
     /*
      * Executes a single instruction
@@ -157,7 +154,7 @@ impl Chip8 {
             if i % 64 == 0 {
                 println!("");
             }
-            print!("{}", if self.screen_buffer[i] { 1 } else { 0 });
+            print!("{}", if *s { 1 } else { 0 });
         });
         println!("");
     }
