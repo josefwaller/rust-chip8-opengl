@@ -7,11 +7,11 @@ pub struct Chip8 {
     // Buffer for the screen
     screen_buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
     // Registers (1 through F)
-    registers: [u8; 16],
+    registers: [u8; 0x10],
     // Program Counter
     pc: usize,
     // Stack and stack pointer
-    stack: [u16; 16],
+    stack: [u16; 0x10],
     sp: usize,
     // Memory
     mem: [u8; 0x1000],
@@ -21,20 +21,23 @@ pub struct Chip8 {
     dt: u8,
     // Sound timer
     st: u8,
+    // Keys that are currently pressed
+    input_state: [bool; 0x10],
 }
 
 impl Chip8 {
     pub fn new() -> Chip8 {
         return Chip8 {
             screen_buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
-            registers: [0x00; 16],
+            registers: [0x00; 0x10],
             pc: 0x200,
-            stack: [0x00; 16],
+            stack: [0x00; 0x10],
             sp: 0,
             mem: [0x00; 0x1000],
             i: 0,
             dt: 0,
             st: 0,
+            input_state: [false; 0x10],
         };
     }
     /*
@@ -60,6 +63,13 @@ impl Chip8 {
         let change: u8 = (dt_nanos * 60 / 1000000) as u8;
         self.dt = self.dt.saturating_sub(change);
         self.st = self.st.saturating_sub(change);
+    }
+    /*
+     * Update the current input states
+     * i.e. Set a button as pressed or not
+     */
+    pub fn update_inputs(&mut self, inputs: [bool; 0x10]) {
+        self.input_state = inputs;
     }
     /*
      * Executes a single instruction
@@ -106,6 +116,11 @@ impl Chip8 {
             0xB000 => self.jmp_v0(inst),
             0xC000 => self.rand(inst),
             0xD000 => self.draw(inst),
+            0xE000 => match inst & 0x00FF {
+                0x9E => self.skp_vx(self.get_reg_idx(inst, 1)),
+                0xA1 => self.sknp_vx(self.get_reg_idx(inst, 1)),
+                _ => self.unknown_opcode_panic(inst),
+            },
             0xF000 => match inst & 0x00FF {
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
@@ -250,6 +265,16 @@ impl Chip8 {
         let x = self.registers[self.get_reg_idx(inst, 1)];
         let y = self.registers[self.get_reg_idx(inst, 2)];
         if x != y {
+            self.pc += 2;
+        }
+    }
+    fn skp_vx(&mut self, x: usize) {
+        if self.input_state[self.registers[x] as usize] {
+            self.pc += 2;
+        }
+    }
+    fn sknp_vx(&mut self, x: usize) {
+        if !self.input_state[self.registers[x] as usize] {
             self.pc += 2;
         }
     }

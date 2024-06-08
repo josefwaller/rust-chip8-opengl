@@ -412,6 +412,52 @@ mod tests {
             })
         })
     }
+    #[test]
+    fn test_skp() {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
+            let val_x = rand_byte(0x10) as u8;
+            emu.execute(build_inst(6, x, 0, val_x));
+            let pc = emu.get_program_counter();
+            let mut inputs = [false; 0x10];
+            // Inputs should be false by default
+            emu.execute(build_inst(0xE, x, 0x9, 0xE));
+            assert_eq_hex!(emu.get_program_counter(), pc);
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0x9, 0xE));
+            assert_eq_hex!(emu.get_program_counter(), pc);
+            inputs[val_x as usize] = true;
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0x9, 0xE));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            inputs[val_x as usize] = false;
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0x9, 0xE));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+        })
+    }
+    #[test]
+    fn test_sknp() {
+        stress_test(|emu, x, _y, _val_x, _val_y| {
+            let val_x = rand_byte(0x10) as u8;
+            emu.execute(build_inst(6, x, 0, val_x));
+            let pc = emu.get_program_counter();
+            let mut inputs = [false; 0x10];
+            // Inputs should be false by default
+            emu.execute(build_inst(0xE, x, 0xA, 0x1));
+            assert_eq_hex!(emu.get_program_counter(), pc + 2);
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0xA, 0x1));
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
+            inputs[val_x as usize] = true;
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0xA, 0x1));
+            assert_eq_hex!(emu.get_program_counter(), pc + 4);
+            inputs[val_x as usize] = false;
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xE, x, 0xA, 0x1));
+            assert_eq_hex!(emu.get_program_counter(), pc + 6);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them
