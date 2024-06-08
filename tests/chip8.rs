@@ -475,6 +475,20 @@ mod tests {
             assert_eq_hex!(emu.get_register_value(y), val_x);
         })
     }
+    #[test]
+    fn test_ld_vx_kp() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            let mut inputs = [false; 0x10];
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xF, x, 0x0, 0xA));
+            assert_eq_hex!(emu.get_register_value(x), val_x);
+            let new_val = rand_byte(0xF);
+            inputs[new_val as usize] = true;
+            emu.update_inputs(inputs);
+            emu.execute(build_inst(0xF, x, 0x0, 0xA));
+            assert_eq_hex!(emu.get_register_value(x), new_val as u8);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them

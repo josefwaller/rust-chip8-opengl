@@ -91,6 +91,7 @@ impl Chip8 {
          *       r[x]: Register index
          *       kk: Constant
          *       addr: Address
+         *       kp: Key press
          */
         match inst & 0xF000 {
             0x0000 => match inst & 0x0FFF {
@@ -143,6 +144,7 @@ impl Chip8 {
             },
             0xF000 => match inst & 0x00FF {
                 0x07 => self.ld_r_dt(reg_at(inst, 1)),
+                0x0A => self.ld_r_kp(reg_at(inst, 1)),
                 0x15 => self.ld_dt_r(reg_at(inst, 1)),
                 0x55 => self.store_at_i(reg_at(inst, 1)),
                 0x65 => self.load_from_i(reg_at(inst, 1)),
@@ -288,6 +290,14 @@ impl Chip8 {
     fn sknp_r(&mut self, x: usize) {
         if !self.input_state[self.registers[x] as usize] {
             self.pc += 2;
+        }
+    }
+    fn ld_r_kp(&mut self, r: usize) {
+        match self.input_state.iter().enumerate().find(|(i, v)| **v) {
+            Some((i, _v)) => self.registers[r] = i as u8,
+            // Sneaky hack - in order to "wait" we just decrement PC so that we reach this addr again
+            // In retrospect this probably isn't that sneaky
+            None => self.pc -= 2,
         }
     }
     fn ld_i(&mut self, addr: u16) {
