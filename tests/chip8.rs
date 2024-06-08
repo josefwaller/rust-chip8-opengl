@@ -458,6 +458,23 @@ mod tests {
             assert_eq_hex!(emu.get_program_counter(), pc + 6);
         })
     }
+    #[test]
+    fn test_ld_dt_vx() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            emu.execute(build_inst(0xF, x, 0x1, 0x5));
+            assert_eq_hex!(emu.get_dt(), val_x);
+        })
+    }
+    #[test]
+    fn test_ld_vx_dt() {
+        stress_test(|emu, x, y, val_x, _val_y| {
+            emu.execute(build_inst(0xF, x, 0x1, 0x5));
+            assert_eq_hex!(emu.get_dt(), val_x);
+            emu.execute(build_inst(0xF, y, 0x0, 0x07));
+            assert_eq_hex!(emu.get_dt(), val_x);
+            assert_eq_hex!(emu.get_register_value(y), val_x);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them

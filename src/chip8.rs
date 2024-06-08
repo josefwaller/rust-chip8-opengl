@@ -122,6 +122,8 @@ impl Chip8 {
                 _ => self.unknown_opcode_panic(inst),
             },
             0xF000 => match inst & 0x00FF {
+                0x07 => self.ld_vx_dt(self.get_reg_idx(inst, 1)),
+                0x15 => self.ld_dt_vx(self.get_reg_idx(inst, 1)),
                 0x55 => self.store_at_i(inst),
                 0x65 => self.load_from_i(inst),
                 0x1E => self.add_i_vx(inst),
@@ -305,6 +307,12 @@ impl Chip8 {
         let r = rand::thread_rng().gen_range(0..0xFF) & (inst & 0xFF);
         self.registers[self.get_reg_idx(inst, 1)] = r as u8;
     }
+    fn ld_dt_vx(&mut self, x: usize) {
+        self.dt = self.registers[x];
+    }
+    fn ld_vx_dt(&mut self, x: usize) {
+        self.registers[x] = self.dt;
+    }
     fn draw(&mut self, inst: u16) {
         let x = self.registers[self.get_reg_idx(inst, 1)];
         let y = self.registers[self.get_reg_idx(inst, 2)];
@@ -339,5 +347,8 @@ impl Chip8 {
     pub fn get_pixel_at(&self, x: u8, y: u8) -> bool {
         return self.screen_buffer
             [((x as usize % 64) + y as usize * 64) % self.screen_buffer.len()];
+    }
+    pub fn get_dt(&self) -> u8 {
+        return self.dt;
     }
 }
