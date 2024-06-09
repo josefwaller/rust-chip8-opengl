@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn test_call_ret() {
         let mut emu = Processor::new();
-        let addr = rand_byte(0x0FFF);
+        let addr = rand_byte(0x0FFD) + 2;
         emu.execute(addr | 0x2000);
         assert_eq_hex!(emu.get_program_counter(), addr as usize - 2);
         emu.execute(0x00EE);
@@ -196,7 +196,7 @@ mod tests {
         let mut emu = Processor::new();
         let mut addrs = [0 as usize; 16];
         for i in 0..16 {
-            addrs[i] = rand_byte(0xFFF) as usize;
+            addrs[i] = rand_byte(0xFFD) as usize + 2;
             emu.execute(addrs[i] as u16 | 0x2000);
             assert_eq_hex!(emu.get_program_counter(), addrs[i] - 2);
         }
