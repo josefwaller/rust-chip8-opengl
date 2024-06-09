@@ -7,3 +7,4 @@ edition = "2021"
 assert_hex = "0.4.1"
 rand = "0.8"
 crossterm = "0.27.0"
+clap = { version = "4.5.6", features = ["derive"] }

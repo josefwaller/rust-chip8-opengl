@@ -1,15 +1,16 @@
 extern crate crossterm;
 mod processor;
 
+use clap::{Parser, ValueEnum};
 use crossterm::{
-    cursor::{DisableBlinking, EnableBlinking, Hide, MoveTo, Show},
+    cursor::{Hide, MoveTo, Show},
     event::{poll, read, Event, KeyCode, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand, QueueableCommand,
 };
 use processor::Processor;
 use std::{
-    env, fs,
+    fs,
     io::{self, stdout, Write},
 };
 use std::{
@@ -17,11 +18,42 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Ui {
+    Terminal,
+    OpenGl,
+}
+
+impl ToString for Ui {
+    fn to_string(&self) -> String {
+        return String::from(match self {
+            Ui::Terminal => "terminal",
+            Ui::OpenGl => "open_gl",
+        });
+    }
+}
+
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(name = "Rust CHIP-8 Simulator")]
+#[command(version = "0.1")]
+#[command(about = "Simulate running CHIP-8 programs", long_about = None)]
+struct Args {
+    // UI to use
+    // Either terminal (default) or opengl
+    #[arg(short, long, default_value_t = Ui::Terminal)]
+    mode: Ui,
+
+    // File to read
+    #[arg(short, long, default_value_t = String::new())]
+    file: String,
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args = Args::parse();
     let mut p = Processor::new();
     let mut stdout = stdout();
-    if args.len() < 2 {
+    if args.file.is_empty() {
         loop {
             render_scene(&p, &mut stdout);
             println!("Enter a command: ");
@@ -32,7 +64,7 @@ fn main() {
         }
     }
     // TODO: Print a nicer message here
-    let data: Vec<u8> = fs::read(args[1].clone()).unwrap();
+    let data: Vec<u8> = fs::read(args.file.clone()).unwrap();
     p.load_program(data.as_slice());
     enable_raw_mode().unwrap();
     stdout.execute(Hide).unwrap();
