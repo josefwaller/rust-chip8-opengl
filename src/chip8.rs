@@ -3,6 +3,25 @@ use rand::Rng;
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 
+pub const SPRITES: [[u8; 5]; 16] = [
+    [0xF0, 0x90, 0x90, 0x90, 0xF0],
+    [0x20, 0x60, 0x20, 0x20, 0x70],
+    [0xF0, 0x10, 0xF0, 0x80, 0xF0],
+    [0xF0, 0x10, 0xF0, 0x10, 0xF0],
+    [0x90, 0x90, 0xF0, 0x10, 0x10],
+    [0xF0, 0x80, 0xF0, 0x10, 0xF0],
+    [0xF0, 0x80, 0xF0, 0x90, 0xF0],
+    [0xF0, 0x10, 0x20, 0x40, 0x40],
+    [0xF0, 0x90, 0xF0, 0x90, 0xF0],
+    [0xF0, 0x90, 0xF0, 0x10, 0xF0],
+    [0xF0, 0x90, 0xF0, 0x90, 0x90],
+    [0xE0, 0x90, 0xE0, 0x90, 0xE0],
+    [0xF0, 0x80, 0x80, 0x80, 0xF0],
+    [0xE0, 0x90, 0x90, 0x90, 0xE0],
+    [0xF0, 0x80, 0xF0, 0x80, 0xF0],
+    [0xF0, 0x80, 0xF0, 0x80, 0x80],
+];
+
 pub struct Chip8 {
     // Buffer for the screen
     screen_buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -27,7 +46,7 @@ pub struct Chip8 {
 
 impl Chip8 {
     pub fn new() -> Chip8 {
-        return Chip8 {
+        let mut c = Chip8 {
             screen_buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
             registers: [0x00; 0x10],
             pc: 0x200,
@@ -39,6 +58,9 @@ impl Chip8 {
             st: 0,
             input_state: [false; 0x10],
         };
+        (0..0x10).for_each(|i| c.mem[(5 * i)..(5 * (i + 1))].copy_from_slice(&SPRITES[i]));
+
+        return c;
     }
     /*
      * Load a program into memory
@@ -147,9 +169,10 @@ impl Chip8 {
                 0x0A => self.ld_r_kp(reg_at(inst, 1)),
                 0x15 => self.ld_dt_r(reg_at(inst, 1)),
                 0x18 => self.ld_st_r(reg_at(inst, 1)),
+                0x1E => self.add_i_r(reg_at(inst, 1)),
+                0x29 => self.ld_i_spr_x(reg_at(inst, 1)),
                 0x55 => self.store_at_i(reg_at(inst, 1)),
                 0x65 => self.load_from_i(reg_at(inst, 1)),
-                0x1E => self.add_i_r(reg_at(inst, 1)),
                 _ => self.unknown_opcode_panic(inst),
             },
             _ => self.unknown_opcode_panic(inst),
@@ -348,6 +371,11 @@ impl Chip8 {
                 self.screen_buffer[coord] = p ^ self.screen_buffer[coord];
             }
         }
+    }
+    // Only loads the sprite for the LSByte of Vr
+    fn ld_i_spr_x(&mut self, r: usize) {
+        // 5 because that's the length of each sprite
+        self.i = (self.registers[r] as u16 & 0xF) * 0x5;
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
