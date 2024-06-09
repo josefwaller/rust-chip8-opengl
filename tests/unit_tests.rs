@@ -502,7 +502,7 @@ mod tests {
             emu.execute(build_inst(0xf, x, 0x2, 0x9));
             // If the implementation changes this test will have to change
             let i = emu.get_i();
-            assert_eq_hex!(i, 5 * (val_x as u16 & 0xF));
+            assert_eq_hex!(i, 6 * (val_x as u16 & 0xF));
             for j in 0..5 {
                 assert_eq_hex!(
                     emu.get_mem_at(i as usize + j),

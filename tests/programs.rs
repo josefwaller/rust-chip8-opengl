@@ -26,7 +26,7 @@ mod tests {
             0x1002, // JMP 0 (Ends program)
         ];
         // run program
-        emu.load_program(&PROGRAM);
+        emu.load_program_u16(&PROGRAM);
         while emu.get_program_counter() != 0x002 {
             emu.step();
         }
@@ -46,7 +46,7 @@ mod tests {
         const PROGRAM: [u16; 9] = [
             0x6042, 0x6100, 0x6242, 0x633C, 0xA400, 0xF355, 0xA400, 0xD454, 0x1002,
         ];
-        emu.load_program(&PROGRAM);
+        emu.load_program_u16(&PROGRAM);
         while emu.get_program_counter() != 0x002 {
             emu.step();
         }
@@ -66,7 +66,7 @@ mod tests {
     fn test_drawing_values_to_screen() {
         let mut emu = Processor::new();
         const PROGRAM: [u16; 7] = [0x6000, 0x6101, 0x00E0, 0xF029, 0xD005, 0x8014, 0x1204];
-        emu.load_program(&PROGRAM);
+        emu.load_program_u16(&PROGRAM);
         // 2 instruction setup
         emu.step();
         emu.step();

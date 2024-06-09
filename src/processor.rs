@@ -5,7 +5,7 @@ const SCREEN_HEIGHT: usize = 32;
 
 pub const SPRITES: [[u8; 5]; 16] = [
     [0xF0, 0x90, 0x90, 0x90, 0xF0],
-    [0x20, 0x60, 0x20, 0x20, 0x70],
+    [0x00, 0x60, 0x20, 0x20, 0x70],
     [0xF0, 0x10, 0xF0, 0x80, 0xF0],
     [0xF0, 0x10, 0xF0, 0x10, 0xF0],
     [0x90, 0x90, 0xF0, 0x10, 0x10],
@@ -42,6 +42,8 @@ pub struct Processor {
     st: u8,
     // Keys that are currently pressed
     input_state: [bool; 0x10],
+    // debug print mode used in tests
+    debug_print: bool,
 }
 
 impl Processor {
@@ -57,15 +59,26 @@ impl Processor {
             dt: 0,
             st: 0,
             input_state: [false; 0x10],
+            debug_print: false,
         };
-        (0..0x10).for_each(|i| c.mem[(5 * i)..(5 * (i + 1))].copy_from_slice(&SPRITES[i]));
+        (0..0x10).for_each(|i| c.mem[(6 * i)..(6 * i + 5)].copy_from_slice(&SPRITES[i]));
 
         return c;
     }
     /*
      * Load a program into memory
      */
-    pub fn load_program(&mut self, program: &[u16]) {
+    pub fn load_program(&mut self, program: &[u8]) {
+        program
+            .iter()
+            .enumerate()
+            .for_each(|(i, v)| self.mem[0x200 + i] = *v);
+    }
+    /*
+     * Load a program as u16s instead of u8s
+     * Mostly just a convenience function
+     */
+    pub fn load_program_u16(&mut self, program: &[u16]) {
         (0..program.len()).for_each(|i| {
             self.mem[0x200 + 2 * i] = (program[i] >> 8) as u8;
             self.mem[0x200 + 2 * i + 1] = program[i] as u8;
@@ -81,10 +94,18 @@ impl Processor {
     /*
      * Update the DT and ST registers given the amount of time that has elapsed in nanoseconds
      */
-    pub fn update_timers(&mut self, dt_nanos: u64) {
-        let change: u8 = (dt_nanos * 60 / 1000000) as u8;
+    pub fn update_timers(&mut self, dt_micros: u128) {
+        let change: u8 = (dt_micros * 60 / 100000) as u8;
         self.dt = self.dt.saturating_sub(change);
         self.st = self.st.saturating_sub(change);
+    }
+    /*
+     * Function that updates the timers assuming that exactly 1/60th of a second has gone by
+     * Useful for applications where measuring time is flaky and we want to make sure the DT and ST are decreasing
+     */
+    pub fn on_tick(&mut self) {
+        self.dt = self.dt.saturating_sub(1);
+        self.st = self.st.saturating_sub(1);
     }
     /*
      * Update the current input states
@@ -98,7 +119,7 @@ impl Processor {
      * Does not increment PC or affect DT or ST
      */
     pub fn execute(&mut self, inst: u16) {
-        if cfg!(debug_assertions) {
+        if self.debug_print {
             println!("Inst is {:X}", inst);
             println!("Initial state:");
             self.dump_state();
@@ -119,7 +140,7 @@ impl Processor {
             0x0000 => match inst & 0x0FFF {
                 0x0E0 => self.clr(),
                 0x0EE => self.ret(),
-                _ => self.unknown_opcode_panic(inst),
+                _ => {}
             },
             0x1000 => self.jmp(inst & 0x0FFF),
             0x2000 => self.call(inst & 0xFFF),
@@ -178,7 +199,7 @@ impl Processor {
             },
             _ => self.unknown_opcode_panic(inst),
         }
-        if cfg!(debug_assertions) {
+        if self.debug_print {
             println!("Post state:");
             self.dump_state();
         }
@@ -188,7 +209,7 @@ impl Processor {
         panic!("Unknown opcode '{:04X}' provided!", opcode);
     }
 
-    fn dump_state(&self) {
+    pub fn dump_state(&self) {
         for i in 0..16 {
             print!("V{:X} = {:#2X}, ", i, self.registers[i])
         }
@@ -285,7 +306,7 @@ impl Processor {
     fn call(&mut self, addr: u16) {
         self.stack[self.sp] = self.pc as u16;
         self.sp += 1;
-        self.pc = addr as usize;
+        self.pc = addr as usize - 2;
     }
     fn se_r_kk(&mut self, r: usize, kk: u8) {
         if self.registers[r] == kk {
@@ -357,26 +378,29 @@ impl Processor {
         self.registers[x] = self.dt;
     }
     fn draw(&mut self, rx: usize, ry: usize, n: usize) {
+        self.registers[0xF] = 0;
         let x = self.registers[rx];
         let y = self.registers[ry];
         // XOR data onto screen
-        for j in 0..(n + 1) {
-            let val = self.mem[self.i as usize + j];
+        for j in 0..n {
+            let mut val = self.mem[self.i as usize + j];
             for k in 0..8 {
                 let coord: usize = ((y as usize + j) % SCREEN_HEIGHT) * SCREEN_WIDTH
                     + (x as usize + k) % SCREEN_WIDTH;
-                let p = (val << k) & 0x80 != 0; // Get MSB
+                let p = (val & 0x80) != 0; // Get MSB
                 if p && self.screen_buffer[coord] {
                     self.registers[0xF] = 1;
                 }
                 self.screen_buffer[coord] = p ^ self.screen_buffer[coord];
+                val = val << 1;
             }
         }
     }
     // Only loads the sprite for the LSByte of Vr
     fn ld_i_spr_x(&mut self, r: usize) {
-        // 5 because that's the length of each sprite
-        self.i = (self.registers[r] as u16 & 0xF) * 0x5;
+        // 6 because that's the length of each sprite
+        // 5 + 1 buffer row
+        self.i = (self.registers[r] as u16 & 0xF) * 0x6;
     }
     fn ld_bcd_r(&mut self, r: usize) {
         self.mem[self.i as usize] = self.registers[r] / 100;
@@ -384,21 +408,24 @@ impl Processor {
         self.mem[self.i as usize + 2] = self.registers[r] % 10;
     }
 
-    pub fn get_register_value(&mut self, register: u8) -> u8 {
+    pub fn get_register_value(&self, register: u8) -> u8 {
         return self.registers[register as usize];
     }
-    pub fn get_program_counter(&mut self) -> usize {
+    pub fn get_program_counter(&self) -> usize {
         return self.pc;
     }
-    pub fn get_i(&mut self) -> u16 {
+    pub fn get_i(&self) -> u16 {
         return self.i;
     }
-    pub fn get_mem_at(&mut self, addr: usize) -> u8 {
+    pub fn get_mem_at(&self, addr: usize) -> u8 {
         return self.mem[addr];
     }
     pub fn get_pixel_at(&self, x: u8, y: u8) -> bool {
         return self.screen_buffer
             [((x as usize % 64) + y as usize * 64) % self.screen_buffer.len()];
+    }
+    pub fn get_input_state(&self, i: usize) -> bool {
+        return self.input_state[i];
     }
     pub fn get_dt(&self) -> u8 {
         return self.dt;
