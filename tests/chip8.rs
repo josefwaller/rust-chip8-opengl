@@ -511,6 +511,16 @@ mod tests {
             }
         })
     }
+    #[test]
+    fn test_ld_bcd() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            emu.execute(build_inst(0xF, x, 0x3, 0x3));
+            let i = emu.get_i() as usize;
+            assert_eq!(emu.get_mem_at(i), val_x / 100);
+            assert_eq!(emu.get_mem_at(i + 1), (val_x / 10) % 10);
+            assert_eq!(emu.get_mem_at(i + 2), val_x % 10);
+        });
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them

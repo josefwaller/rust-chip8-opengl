@@ -171,6 +171,7 @@ impl Chip8 {
                 0x18 => self.ld_st_r(reg_at(inst, 1)),
                 0x1E => self.add_i_r(reg_at(inst, 1)),
                 0x29 => self.ld_i_spr_x(reg_at(inst, 1)),
+                0x33 => self.ld_bcd_r(reg_at(inst, 1)),
                 0x55 => self.store_at_i(reg_at(inst, 1)),
                 0x65 => self.load_from_i(reg_at(inst, 1)),
                 _ => self.unknown_opcode_panic(inst),
@@ -376,6 +377,11 @@ impl Chip8 {
     fn ld_i_spr_x(&mut self, r: usize) {
         // 5 because that's the length of each sprite
         self.i = (self.registers[r] as u16 & 0xF) * 0x5;
+    }
+    fn ld_bcd_r(&mut self, r: usize) {
+        self.mem[self.i as usize] = self.registers[r] / 100;
+        self.mem[self.i as usize + 1] = (self.registers[r] / 10) % 10;
+        self.mem[self.i as usize + 2] = self.registers[r] % 10;
     }
 
     pub fn get_register_value(&mut self, register: u8) -> u8 {
