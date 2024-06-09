@@ -489,6 +489,13 @@ mod tests {
             assert_eq_hex!(emu.get_register_value(x), new_val as u8);
         })
     }
+    #[test]
+    fn test_ld_st_vx() {
+        stress_test(|emu, x, _y, val_x, _val_y| {
+            emu.execute(build_inst(0xf, x, 0x1, 0x8));
+            assert_eq_hex!(emu.get_st(), val_x);
+        })
+    }
 
     /*
      * Run a block of tests on two random registers with 2 random values assigned to them

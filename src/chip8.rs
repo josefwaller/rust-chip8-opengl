@@ -146,6 +146,7 @@ impl Chip8 {
                 0x07 => self.ld_r_dt(reg_at(inst, 1)),
                 0x0A => self.ld_r_kp(reg_at(inst, 1)),
                 0x15 => self.ld_dt_r(reg_at(inst, 1)),
+                0x18 => self.ld_st_r(reg_at(inst, 1)),
                 0x55 => self.store_at_i(reg_at(inst, 1)),
                 0x65 => self.load_from_i(reg_at(inst, 1)),
                 0x1E => self.add_i_r(reg_at(inst, 1)),
@@ -293,7 +294,7 @@ impl Chip8 {
         }
     }
     fn ld_r_kp(&mut self, r: usize) {
-        match self.input_state.iter().enumerate().find(|(i, v)| **v) {
+        match self.input_state.iter().enumerate().find(|(_i, v)| **v) {
             Some((i, _v)) => self.registers[r] = i as u8,
             // Sneaky hack - in order to "wait" we just decrement PC so that we reach this addr again
             // In retrospect this probably isn't that sneaky
@@ -321,6 +322,9 @@ impl Chip8 {
     }
     fn rand(&mut self, r: usize, mask: u16) {
         self.registers[r] = (rand::thread_rng().gen_range(0..0xFF) & mask) as u8;
+    }
+    fn ld_st_r(&mut self, r: usize) {
+        self.st = self.registers[r];
     }
     fn ld_dt_r(&mut self, x: usize) {
         self.dt = self.registers[x];
@@ -364,6 +368,9 @@ impl Chip8 {
     }
     pub fn get_dt(&self) -> u8 {
         return self.dt;
+    }
+    pub fn get_st(&self) -> u8 {
+        return self.st;
     }
 }
 
