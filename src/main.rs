@@ -2,10 +2,10 @@ extern crate crossterm;
 mod processor;
 
 use crossterm::{
-    cursor::MoveTo,
+    cursor::{DisableBlinking, EnableBlinking, Hide, MoveTo, Show},
     event::{poll, read, Event, KeyCode, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    QueueableCommand,
+    ExecutableCommand, QueueableCommand,
 };
 use processor::Processor;
 use std::{
@@ -35,6 +35,7 @@ fn main() {
     let data: Vec<u8> = fs::read(args[1].clone()).unwrap();
     p.load_program(data.as_slice());
     enable_raw_mode().unwrap();
+    stdout.execute(Hide).unwrap();
     const KEY_MAP: [char; 16] = [
         'x', '1', '2', '3', 'q', 'w', 'e', 'a', 's', 'd', 'z', 'c', '4', 'r', 'f', 'v',
     ];
@@ -79,6 +80,7 @@ fn main() {
         }
     }
     disable_raw_mode().unwrap();
+    stdout.execute(Show).unwrap();
 }
 
 fn render_scene(p: &Processor, stdout: &mut Stdout) {
@@ -100,22 +102,17 @@ fn render_scene(p: &Processor, stdout: &mut Stdout) {
         stdout.write(&eol).unwrap();
     }
     stdout.queue(MoveTo(0, 33)).unwrap();
-    (0..=0xF).for_each(|r| print!("V{:x} = {:#2X} ", r, p.get_register_value(r)));
+    print!("  PC  |  I   |");
+    (0..=0xF).for_each(|r| print!("  V{:x}  |", r));
     stdout.queue(MoveTo(0, 34)).unwrap();
-    println!(
-        "PC = {:X?}, I = {:X?}, DT = {:X?}, ST = {:X?}",
-        p.get_program_counter(),
-        p.get_i(),
-        p.get_dt(),
-        p.get_st()
-    );
+    print!("{:#6X}|{:#6X}|", p.get_program_counter(), p.get_i());
+    (0..=0xF).for_each(|r| print!(" {:#4X} |", p.get_register_value(r)));
     stdout.queue(MoveTo(0, 35)).unwrap();
-    (0..=0xF).for_each(|i| {
-        print!(
-            "I{:x} = {} ",
-            i,
-            if p.get_input_state(i) { 'T' } else { 'F' }
-        )
-    });
-    println!("");
+    print!("  DT  |  ST  ");
+    (0..=0xF).for_each(|i| print!("|  I{:X}  ", i));
+    stdout.queue(MoveTo(0, 36)).unwrap();
+    print!(" {:#4X?} | {:#4X?} ", p.get_dt(), p.get_st());
+    (0..=0xF).for_each(|i| print!("|  {}   ", if p.get_input_state(i) { 'T' } else { 'F' }));
+    stdout.queue(MoveTo(0, 37)).unwrap();
+    stdout.flush().unwrap();
 }

@@ -78,6 +78,7 @@ impl Processor {
      * Load a program as u16s instead of u8s
      * Mostly just a convenience function
      */
+    #[allow(dead_code)]
     pub fn load_program_u16(&mut self, program: &[u16]) {
         (0..program.len()).for_each(|i| {
             self.mem[0x200 + 2 * i] = (program[i] >> 8) as u8;

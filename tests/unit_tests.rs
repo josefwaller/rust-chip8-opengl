@@ -187,7 +187,7 @@ mod tests {
         let mut emu = Processor::new();
         let addr = rand_byte(0x0FFF);
         emu.execute(addr | 0x2000);
-        assert_eq_hex!(emu.get_program_counter(), addr as usize);
+        assert_eq_hex!(emu.get_program_counter(), addr as usize - 2);
         emu.execute(0x00EE);
         assert_eq_hex!(emu.get_program_counter(), 0x200 as usize);
     }
@@ -198,13 +198,12 @@ mod tests {
         for i in 0..16 {
             addrs[i] = rand_byte(0xFFF) as usize;
             emu.execute(addrs[i] as u16 | 0x2000);
-            assert_eq_hex!(emu.get_program_counter(), addrs[i]);
+            assert_eq_hex!(emu.get_program_counter(), addrs[i] - 2);
         }
-        for i in (0..16).rev() {
-            assert_eq_hex!(emu.get_program_counter(), addrs[i]);
+        for i in (0..15).rev() {
             emu.execute(0x00EE);
+            assert_eq_hex!(emu.get_program_counter(), addrs[i] - 2);
         }
-        assert_eq_hex!(emu.get_program_counter(), 0x200);
     }
     #[test]
     fn test_se_const() {
