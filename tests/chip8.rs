@@ -498,13 +498,12 @@ mod tests {
     }
     #[test]
     fn test_ld_vx_spr() {
-        stress_test(|emu, x, y, val_x, _val_y| {
+        stress_test(|emu, x, _y, val_x, _val_y| {
             emu.execute(build_inst(0xf, x, 0x2, 0x9));
             // If the implementation changes this test will have to change
             let i = emu.get_i();
             assert_eq_hex!(i, 5 * (val_x as u16 & 0xF));
             for j in 0..5 {
-                println!("{}", j);
                 assert_eq_hex!(
                     emu.get_mem_at(i as usize + j),
                     SPRITES[val_x as usize & 0xF][j]

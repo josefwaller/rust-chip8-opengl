@@ -3,7 +3,7 @@ extern crate assert_hex;
 
 mod tests {
     use assert_hex::assert_eq_hex;
-    use rust_chip8_opengl::chip8::Chip8;
+    use rust_chip8_opengl::chip8::{Chip8, SPRITES};
 
     #[test]
     fn test_fibinnaci() {
@@ -61,5 +61,26 @@ mod tests {
                 .enumerate()
                 .for_each(|(x, v)| assert_eq_hex!(emu.get_pixel_at(x as u8, y as u8), v.to_owned()))
         });
+    }
+    #[test]
+    fn test_drawing_values_to_screen() {
+        let mut emu = Chip8::new();
+        const PROGRAM: [u16; 7] = [0x6000, 0x6101, 0x00E0, 0xF029, 0xD005, 0x8014, 0x1204];
+        emu.load_program(&PROGRAM);
+        // 2 instruction setup
+        emu.step();
+        emu.step();
+        // Check for each digit
+        (0x0..=0xF).for_each(|i| {
+            // Step 5 times
+            (0..5).for_each(|_| emu.step());
+            // Check the digit was drawn at (i, i)
+            (0..5).for_each(|y| {
+                (0..8).for_each(|x| {
+                    let pixel = (SPRITES[i][y] >> (7 - x) & 0x1) == 0x1;
+                    assert_eq!(emu.get_pixel_at((i + x) as u8, (i + y) as u8), pixel);
+                });
+            })
+        })
     }
 }
