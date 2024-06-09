@@ -16,7 +16,7 @@ mod tests {
             | (d as u16 & 0x0F) as u16;
     }
     fn rand_byte(max: u16) -> u16 {
-        return rand::thread_rng().gen_range(0..max) as u16;
+        return rand::thread_rng().gen_range(0..=max) as u16;
     }
     #[test]
     fn test_ld_vx_kk() {
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_ld_i_vx() {
         stress_test(|emu, x, _y, _val_x, _val_y| {
-            // We are loading up to 16 values into memory so max is a bit less
+            // We are loading up to 16 values into memory so max is 16 bits less
             let addr = rand_byte(0xFF0);
             emu.execute(build_inst(
                 0xA,
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn test_skp() {
         stress_test(|emu, x, _y, _val_x, _val_y| {
-            let val_x = rand_byte(0x10) as u8;
+            let val_x = rand_byte(0xF) as u8;
             emu.execute(build_inst(6, x, 0, val_x));
             let pc = emu.get_program_counter();
             let mut inputs = [false; 0x10];
@@ -438,7 +438,7 @@ mod tests {
     #[test]
     fn test_sknp() {
         stress_test(|emu, x, _y, _val_x, _val_y| {
-            let val_x = rand_byte(0x10) as u8;
+            let val_x = rand_byte(0xF) as u8;
             emu.execute(build_inst(6, x, 0, val_x));
             let pc = emu.get_program_counter();
             let mut inputs = [false; 0x10];
@@ -498,14 +498,17 @@ mod tests {
     fn stress_test(f: fn(&mut Chip8, u8, u8, u8, u8)) {
         let mut emu: Chip8 = Chip8::new();
         for vx in 0..15 {
-            let mut vy = rand_byte(15 - 1) as u8;
+            let mut vy = rand_byte(0xE - 1) as u8;
             if vy >= vx {
                 vy += 1;
             }
             let val_x = rand_byte(0xFE) as u8 + 1;
-            let val_y = rand_byte(val_x as u16) as u8;
+            let val_y = rand_byte(val_x as u16 - 1) as u8;
             emu.execute(build_inst(6, vx, val_x >> 4, val_x));
             emu.execute(build_inst(6, vy, val_y >> 4, val_y));
+            println!("val_x = {}, val_y = {}", val_x, val_y);
+            assert_eq_hex!(emu.get_register_value(vx), val_x);
+            assert_eq_hex!(emu.get_register_value(vy), val_y);
             // Set VF to something other than 1 or 0
             emu.execute(build_inst(6, 0xF, 0, 2));
             f(&mut emu, vx, vy, val_x, val_y);
