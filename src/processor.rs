@@ -22,7 +22,7 @@ pub const SPRITES: [[u8; 5]; 16] = [
     [0xF0, 0x80, 0xF0, 0x80, 0x80],
 ];
 
-pub struct Chip8 {
+pub struct Processor {
     // Buffer for the screen
     screen_buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
     // Registers (1 through F)
@@ -44,9 +44,9 @@ pub struct Chip8 {
     input_state: [bool; 0x10],
 }
 
-impl Chip8 {
-    pub fn new() -> Chip8 {
-        let mut c = Chip8 {
+impl Processor {
+    pub fn new() -> Processor {
+        let mut c = Processor {
             screen_buffer: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
             registers: [0x00; 0x10],
             pc: 0x200,

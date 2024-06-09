@@ -4,7 +4,7 @@ extern crate assert_hex;
 mod tests {
     use assert_hex::assert_eq_hex;
     use rand::Rng;
-    use rust_chip8_opengl::chip8::{Chip8, SPRITES};
+    use rust_chip8_opengl::processor::{Processor, SPRITES};
 
     // Build an instruction from 4 4bit values
     // Returns 0x[a][b][c][d]
@@ -20,7 +20,7 @@ mod tests {
     }
     #[test]
     fn test_ld_vx_kk() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         let mut set_vals: [u8; 16] = [0; 16];
         for x in 0..15 {
             let val_x = rand_byte(0xFF) as u8;
@@ -177,14 +177,14 @@ mod tests {
     }
     #[test]
     fn test_jmp() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         let v = rand_byte(0xFFF);
         emu.execute(0x1000 | v);
         assert_eq_hex!(emu.get_program_counter(), (v - 2) as usize);
     }
     #[test]
     fn test_call_ret() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         let addr = rand_byte(0x0FFF);
         emu.execute(addr | 0x2000);
         assert_eq_hex!(emu.get_program_counter(), addr as usize);
@@ -193,7 +193,7 @@ mod tests {
     }
     #[test]
     fn stress_test_call_ret() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         let mut addrs = [0 as usize; 16];
         for i in 0..16 {
             addrs[i] = rand_byte(0xFFF) as usize;
@@ -354,7 +354,7 @@ mod tests {
     }
     #[test]
     fn test_jmp_v0() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         for _ in 0..16 {
             let addr = rand_byte(0xFFF);
             let v = rand_byte(0xFF) as u8;
@@ -527,8 +527,8 @@ mod tests {
      * Used for basic tests
      * Value of register X is guaranteed to be larger than value of register y
      */
-    fn stress_test(f: fn(&mut Chip8, u8, u8, u8, u8)) {
-        let mut emu: Chip8 = Chip8::new();
+    fn stress_test(f: fn(&mut Processor, u8, u8, u8, u8)) {
+        let mut emu: Processor = Processor::new();
         for vx in 0..15 {
             let mut vy = rand_byte(0xE - 1) as u8;
             if vy >= vx {

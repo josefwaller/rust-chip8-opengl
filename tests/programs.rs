@@ -3,11 +3,11 @@ extern crate assert_hex;
 
 mod tests {
     use assert_hex::assert_eq_hex;
-    use rust_chip8_opengl::chip8::{Chip8, SPRITES};
+    use rust_chip8_opengl::processor::{Processor, SPRITES};
 
     #[test]
     fn test_fibinnaci() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         // Simple program to compute the first 100 fibinnaci sequence
         const PROGRAM: [u16; 14] = [
             0x6001, // LD V0 0x01
@@ -42,7 +42,7 @@ mod tests {
     }
     #[test]
     fn test_draw_smiley() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         const PROGRAM: [u16; 9] = [
             0x6042, 0x6100, 0x6242, 0x633C, 0xA400, 0xF355, 0xA400, 0xD454, 0x1002,
         ];
@@ -64,7 +64,7 @@ mod tests {
     }
     #[test]
     fn test_drawing_values_to_screen() {
-        let mut emu = Chip8::new();
+        let mut emu = Processor::new();
         const PROGRAM: [u16; 7] = [0x6000, 0x6101, 0x00E0, 0xF029, 0xD005, 0x8014, 0x1204];
         emu.load_program(&PROGRAM);
         // 2 instruction setup

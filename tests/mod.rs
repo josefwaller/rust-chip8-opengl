@@ -1,2 +1,2 @@
-mod chip8;
 mod programs;
+mod unit_tests;
