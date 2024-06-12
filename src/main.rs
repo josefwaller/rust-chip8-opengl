@@ -4,24 +4,28 @@ mod processor;
 
 use crate::interface::{Interface, TerminalInterface};
 use clap::{Parser, ValueEnum};
+use interface::OpenGlInterface;
 use processor::Processor;
+use std::boxed::Box;
 use std::time::Instant;
 use std::{
     fs,
     io::{self},
 };
 
+use glfw::Context;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum Ui {
+enum Mode {
     Terminal,
     OpenGl,
 }
 
-impl ToString for Ui {
+impl ToString for Mode {
     fn to_string(&self) -> String {
         return String::from(match self {
-            Ui::Terminal => "terminal",
-            Ui::OpenGl => "open_gl",
+            Mode::Terminal => "terminal",
+            Mode::OpenGl => "open_gl",
         });
     }
 }
@@ -34,8 +38,8 @@ impl ToString for Ui {
 struct Args {
     // UI to use
     // Either terminal (default) or opengl
-    #[arg(short, long, default_value_t = Ui::Terminal)]
-    mode: Ui,
+    #[arg(short, long, default_value_t = Mode::Terminal)]
+    mode: Mode,
 
     // File to read
     #[arg(short, long, default_value_t = String::new())]
@@ -45,7 +49,11 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let mut p = Processor::new();
-    let mut interface = TerminalInterface::new();
+    let mut interface: Box<dyn Interface> = match args.mode {
+        Mode::Terminal => Box::new(TerminalInterface::new()),
+        Mode::OpenGl => Box::new(OpenGlInterface::new()),
+    };
+
     if args.file.is_empty() {
         loop {
             interface.render(&p);
