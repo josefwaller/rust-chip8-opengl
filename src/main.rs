@@ -11,6 +11,7 @@ use std::thread;
 use std::time::Instant;
 use std::{
     fs,
+    fs::{File, OpenOptions},
     io::{self, Write},
     time::Duration,
 };
@@ -44,6 +45,10 @@ struct Args {
     // File to read
     #[arg(short, long, default_value_t = String::new())]
     file: String,
+
+    // Optional debug output file, to write all the instructions the processor runs through
+    #[arg(long, default_value_t = String::new())]
+    debug_file: String,
 }
 
 fn main() {
@@ -54,6 +59,17 @@ fn main() {
         Mode::OpenGl => Box::new(OpenGlInterface::new()),
     };
 
+    let mut file: Option<File> = None;
+    if !args.debug_file.is_empty() {
+        file = Some(
+            OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(args.debug_file.clone())
+                .unwrap(),
+        );
+        writeln!(file.as_ref().unwrap(), "BEGINNING OF OPCODE RECORD:").unwrap();
+    }
     if args.file.is_empty() {
         disable_raw_mode().unwrap();
         loop {
@@ -69,8 +85,24 @@ fn main() {
     let data: Vec<u8> = fs::read(args.file.clone()).unwrap();
     p.load_program(data.as_slice());
     let mut dt = Instant::now();
+    let mut last_inst: u16 = 0x0;
     loop {
         let pc = p.get_program_counter();
+        if !args.debug_file.is_empty() {
+            let inst = ((p.get_mem_at(pc) as u16) << 8) + p.get_mem_at(pc + 1) as u16;
+            // Don't write the exact same instruction multiple times in a row
+            if inst != last_inst {
+                let to_write = format!("{:#6X}", inst);
+                writeln!(
+                    file.as_ref().unwrap(),
+                    "{:#6x} {}",
+                    pc,
+                    to_write[2..].to_string()
+                )
+                .unwrap();
+                last_inst = inst;
+            }
+        }
         p.step();
 
         if interface.update(&mut p) {
@@ -87,6 +119,7 @@ fn main() {
         if just_ran & 0xF0 == 0xD0 || just_ran == 0x00 {
             interface.render(&p);
         }
+        thread::sleep(Duration::from_micros(10));
     }
     interface.exit();
 }

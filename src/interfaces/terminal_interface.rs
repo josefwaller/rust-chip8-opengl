@@ -100,8 +100,8 @@ impl Interface for TerminalInterface {
         return false;
     }
     fn exit(&mut self) {
-        disable_raw_mode().unwrap();
         self.stdout.execute(Show).unwrap();
+        disable_raw_mode().unwrap();
     }
 
     fn render(&mut self, p: &Processor) {

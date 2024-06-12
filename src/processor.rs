@@ -302,7 +302,7 @@ impl Processor {
         self.pc = (addr - 2) as usize;
     }
     fn jmp_r0(&mut self, addr: u16) {
-        self.pc = (addr + self.registers[0] as u16) as usize - 2;
+        self.pc = (addr + self.registers[0] as u16) as usize;
     }
     fn call(&mut self, addr: u16) {
         self.stack[self.sp] = self.pc as u16;
@@ -354,11 +354,13 @@ impl Processor {
         for j in 0..(n + 1) {
             self.registers[j as usize] = self.mem[(self.i + j as u16) as usize];
         }
+        self.i += (n + 1) as u16;
     }
     fn store_at_i(&mut self, n: usize) {
         for j in 0..(n + 1) {
             self.mem[(self.i + j as u16) as usize] = self.registers[j as usize];
         }
+        self.i += (n + 1) as u16;
     }
     fn add_i_r(&mut self, r: usize) {
         self.i = self.i.wrapping_add(self.registers[r] as u16);
