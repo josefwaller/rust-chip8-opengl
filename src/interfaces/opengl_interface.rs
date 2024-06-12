@@ -1,131 +1,16 @@
-extern crate gl;
-extern crate glfw;
-
+use crate::interfaces::Interface;
 use crate::processor::Processor;
-//use beryllium::*;
-use crossterm::{
-    cursor::{Hide, MoveTo, Show},
-    event::{poll, read, Event, KeyCode, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    ExecutableCommand,
-};
+
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLuint};
 use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
-use std::{
-    array,
-    ffi::CString,
-    io::{stdout, Stdout, Write},
-    mem,
-    os::raw::c_void,
-    ptr,
-    time::{Duration, Instant},
-};
-
-pub trait Interface {
-    //  fn new() -> Self;
-    // Update the inputs in the processor
-    // Return true if the program should exit, false otherwise
-    fn update_inputs(&mut self, p: &mut Processor) -> bool;
-    fn render(&mut self, p: &Processor);
-    fn exit(&mut self);
-}
-
-const KEY_MAP: [char; 16] = [
-    'x', '1', '2', '3', 'q', 'w', 'e', 'a', 's', 'd', 'z', 'c', '4', 'r', 'f', 'v',
-];
-
-pub struct TerminalInterface {
-    stdout: Stdout,
-    input_dt: Instant,
-}
-
-impl TerminalInterface {
-    pub fn new() -> TerminalInterface {
-        let mut stdout = stdout();
-        enable_raw_mode().unwrap();
-        stdout.execute(Hide).unwrap();
-
-        return TerminalInterface {
-            stdout: stdout,
-            input_dt: Instant::now(),
-        };
-    }
-}
-impl Interface for TerminalInterface {
-    fn update_inputs(&mut self, p: &mut Processor) -> bool {
-        if self.input_dt.elapsed().as_micros() > 50 {
-            let mut inputs = [false; 0x10];
-            if poll(Duration::from_millis(1)).unwrap() {
-                match read().unwrap() {
-                    Event::Key(evt) => {
-                        if evt.code == KeyCode::Char('c')
-                            && evt.modifiers.contains(KeyModifiers::CONTROL)
-                        {
-                            return true;
-                        }
-                        match evt.code {
-                            KeyCode::Char(c) => match KEY_MAP.iter().position(|ch| *ch == c) {
-                                Some(i) => inputs[i] = true,
-                                None => {}
-                            },
-                            _ => {}
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            p.update_inputs(inputs);
-            self.input_dt = Instant::now();
-        }
-        return false;
-    }
-    fn exit(&mut self) {
-        disable_raw_mode().unwrap();
-        self.stdout.execute(Show).unwrap();
-    }
-
-    fn render(&mut self, p: &Processor) {
-        self.stdout.execute(Clear(ClearType::All)).unwrap();
-        self.stdout.execute(MoveTo(0, 0)).unwrap();
-        // Create a buffer for the actual screen for speed reasons
-        let mut buf = [[' ' as u8; 2 * 64]; 32];
-        for y in 0..32 {
-            for x in 0..64 {
-                if p.get_pixel_at(x as u8, y as u8) {
-                    buf[y][2 * x] = '[' as u8;
-                    buf[y][2 * x + 1] = ']' as u8;
-                };
-            }
-        }
-        let eol = ['\r' as u8, '\n' as u8];
-        for row in buf {
-            self.stdout.write(&row).unwrap();
-            self.stdout.write(&eol).unwrap();
-        }
-        // Print debug information
-        self.stdout.execute(MoveTo(0, 33)).unwrap();
-        print!("  PC  |  I   |");
-        (0..=0xF).for_each(|r| print!("  V{:x}  |", r));
-        self.stdout.execute(MoveTo(0, 34)).unwrap();
-        print!("{:#6X}|{:#6X}|", p.get_program_counter(), p.get_i());
-        (0..=0xF).for_each(|r| print!(" {:#4X} |", p.get_register_value(r)));
-        self.stdout.execute(MoveTo(0, 35)).unwrap();
-        print!("  DT  |  ST  ");
-        (0..=0xF).for_each(|i| print!("|  I{:X}  ", i));
-        self.stdout.execute(MoveTo(0, 36)).unwrap();
-        print!(" {:#4X?} | {:#4X?} ", p.get_dt(), p.get_st());
-        (0..=0xF).for_each(|i| print!("|  {}   ", if p.get_input_state(i) { 'T' } else { 'F' }));
-        self.stdout.execute(MoveTo(0, 37)).unwrap();
-        self.stdout.flush().unwrap();
-    }
-}
+use std::{array, ffi::CString, mem, os::raw::c_void, ptr};
 
 pub struct OpenGlInterface {
     glfw: Glfw,
     events: GlfwReceiver<(f64, WindowEvent)>,
     window: PWindow,
-    color: [f32; 3],
     cbo: GLuint,
+    input_states: [bool; 0x10],
 }
 const VERTEX_SHADER: &str = r#"
 #version 330 core
@@ -178,10 +63,10 @@ impl OpenGlInterface {
 
         // Load up vertexes
         // Define "window" boundaries
-        const X_MIN: f32 = -0.75;
-        const X_MAX: f32 = 0.75;
-        const Y_MIN: f32 = -0.75;
-        const Y_MAX: f32 = 0.75;
+        const X_MIN: f32 = -1.0;
+        const X_MAX: f32 = 1.0;
+        const Y_MIN: f32 = -1.0;
+        const Y_MAX: f32 = 1.0;
         // Generate 4 vertices for each pixel (2 triangles)
         let vertices: [f32; 3 * 4 * 64 * 32] = array::from_fn(|i| {
             const PIXEL: [[f32; 3]; 4] = [
@@ -209,7 +94,7 @@ impl OpenGlInterface {
         });
 
         // Default color is just white
-        let colors: [f32; 3 * 4 * 65 * 33] = array::from_fn(|i| {
+        let colors: [f32; 3 * 4 * 65 * 33] = array::from_fn(|_| {
             return 1.0 as f32;
         });
 
@@ -287,8 +172,8 @@ impl OpenGlInterface {
             glfw,
             events,
             window,
-            color: [1.0, 0.0, 0.0],
             cbo: cbo,
+            input_states: [false; 0x10],
         }
     }
 }
@@ -296,6 +181,24 @@ impl OpenGlInterface {
 impl Interface for OpenGlInterface {
     fn exit(&mut self) {}
     fn update_inputs(&mut self, p: &mut Processor) -> bool {
+        let key_map = [
+            glfw::Key::X,
+            glfw::Key::Kp1,
+            glfw::Key::Kp2,
+            glfw::Key::Kp3,
+            glfw::Key::Q,
+            glfw::Key::W,
+            glfw::Key::E,
+            glfw::Key::A,
+            glfw::Key::S,
+            glfw::Key::D,
+            glfw::Key::Z,
+            glfw::Key::C,
+            glfw::Key::Kp4,
+            glfw::Key::R,
+            glfw::Key::F,
+            glfw::Key::V,
+        ];
         // Check for events
         self.glfw.poll_events();
         for (_, event) in glfw::flush_messages(&self.events) {
@@ -308,9 +211,22 @@ impl Interface for OpenGlInterface {
                 glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) => {
                     self.window.set_should_close(true);
                 }
+                glfw::WindowEvent::Key(key, _, action, _) => {
+                    match key_map.iter().position(|k| *k == key) {
+                        Some(i) => {
+                            self.input_states[i] = match action {
+                                glfw::Action::Press => true,
+                                glfw::Action::Release => false,
+                                _ => self.input_states[i],
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 _ => {}
             }
         }
+        p.update_inputs(self.input_states);
         return self.window.should_close();
     }
     fn render(&mut self, p: &Processor) {
@@ -374,7 +290,7 @@ unsafe fn compile_shader(shader_src: &str, shader_type: u32) -> u32 {
             ptr::null_mut(),
             info_log.as_mut_ptr() as *mut GLchar,
         );
-        println!("Error compiling shader! {:?}", String::from_utf8(info_log));
+        panic!("Error compiling shader! {:?}", String::from_utf8(info_log));
     }
 
     return shader;
@@ -382,7 +298,6 @@ unsafe fn compile_shader(shader_src: &str, shader_type: u32) -> u32 {
 
 unsafe fn create_program(shaders: Vec<u32>) -> u32 {
     let program = gl::CreateProgram();
-    println!("{:?}", shaders);
     gl::AttachShader(program, shaders[0]);
     gl::AttachShader(program, shaders[1]);
     // for shader in shaders {
@@ -403,7 +318,7 @@ unsafe fn create_program(shaders: Vec<u32>) -> u32 {
             ptr::null_mut(),
             info_log.as_mut_ptr() as *mut GLchar,
         );
-        println!(
+        panic!(
             "Error creating program! {}",
             String::from_utf8(info_log).unwrap()
         );

@@ -1,10 +1,9 @@
-extern crate crossterm;
-mod interface;
+mod interfaces;
 mod processor;
 
-use crate::interface::{Interface, TerminalInterface};
+use interfaces::{Interface, OpenGlInterface, TerminalInterface};
+
 use clap::{Parser, ValueEnum};
-use interface::OpenGlInterface;
 use processor::Processor;
 use std::boxed::Box;
 use std::time::Instant;
@@ -12,8 +11,6 @@ use std::{
     fs,
     io::{self},
 };
-
-use glfw::Context;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Mode {
