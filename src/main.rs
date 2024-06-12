@@ -85,13 +85,13 @@ fn main() {
     let data: Vec<u8> = fs::read(args.file.clone()).unwrap();
     p.load_program(data.as_slice());
     let mut dt = Instant::now();
-    let mut last_inst: u16 = 0x0;
+    let mut last_pc: usize = 0x0000;
     loop {
         let pc = p.get_program_counter();
         if !args.debug_file.is_empty() {
             let inst = ((p.get_mem_at(pc) as u16) << 8) + p.get_mem_at(pc + 1) as u16;
             // Don't write the exact same instruction multiple times in a row
-            if inst != last_inst {
+            if pc != last_pc {
                 let to_write = format!("{:#6X}", inst);
                 writeln!(
                     file.as_ref().unwrap(),
@@ -100,7 +100,7 @@ fn main() {
                     to_write[2..].to_string()
                 )
                 .unwrap();
-                last_inst = inst;
+                last_pc = pc;
             }
         }
         p.step();
