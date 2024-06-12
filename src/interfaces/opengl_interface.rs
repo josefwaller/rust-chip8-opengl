@@ -180,7 +180,7 @@ impl OpenGlInterface {
 
 impl Interface for OpenGlInterface {
     fn exit(&mut self) {}
-    fn update_inputs(&mut self, p: &mut Processor) -> bool {
+    fn update(&mut self, p: &mut Processor) -> bool {
         let key_map = [
             glfw::Key::X,
             glfw::Key::Kp1,

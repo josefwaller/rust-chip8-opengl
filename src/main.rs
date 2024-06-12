@@ -1,15 +1,18 @@
 mod interfaces;
 mod processor;
 
+use crossterm::terminal::disable_raw_mode;
 use interfaces::{Interface, OpenGlInterface, TerminalInterface};
 
 use clap::{Parser, ValueEnum};
 use processor::Processor;
 use std::boxed::Box;
+use std::thread;
 use std::time::Instant;
 use std::{
     fs,
-    io::{self},
+    io::{self, Write},
+    time::Duration,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -52,9 +55,11 @@ fn main() {
     };
 
     if args.file.is_empty() {
+        disable_raw_mode().unwrap();
         loop {
             interface.render(&p);
-            println!("Enter a command: ");
+            print!("Enter a command: ");
+            io::stdout().flush().unwrap();
             let mut str = String::new();
             io::stdin().read_line(&mut str).unwrap();
             let hex = u16::from_str_radix(str.trim(), 16).unwrap();
@@ -68,7 +73,7 @@ fn main() {
         let pc = p.get_program_counter();
         p.step();
 
-        if interface.update_inputs(&mut p) {
+        if interface.update(&mut p) {
             break;
         }
 

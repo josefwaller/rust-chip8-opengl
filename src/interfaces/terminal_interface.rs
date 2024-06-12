@@ -1,12 +1,21 @@
 use crate::interfaces::Interface;
 use crate::processor::Processor;
 extern crate crossterm;
+extern crate kira;
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
     event::{poll, read, Event, KeyCode, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand,
+};
+use kira::{
+    manager::{AudioManager, AudioManagerSettings, DefaultBackend},
+    sound::{
+        static_sound::{StaticSoundData, StaticSoundHandle},
+        PlaybackState, SoundData,
+    },
+    tween::Tween,
 };
 
 use std::{
@@ -21,6 +30,9 @@ const KEY_MAP: [char; 16] = [
 pub struct TerminalInterface {
     stdout: Stdout,
     input_dt: Instant,
+    audio_manager: AudioManager,
+    sound_data: StaticSoundData,
+    sound_handle: StaticSoundHandle,
 }
 
 impl TerminalInterface {
@@ -28,15 +40,28 @@ impl TerminalInterface {
         let mut stdout = stdout();
         enable_raw_mode().unwrap();
         stdout.execute(Hide).unwrap();
+        let mut am = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
+        let sd = StaticSoundData::from_file("sound.ogg").unwrap();
+        let mut sh = am.play(sd.clone()).unwrap();
+        let tween = Tween {
+            start_time: kira::StartTime::Immediate,
+            duration: Duration::from_micros(0),
+            easing: kira::tween::Easing::Linear,
+        };
+        sh.set_loop_region(0.025..0.075);
+        sh.pause(tween);
 
         return TerminalInterface {
             stdout: stdout,
             input_dt: Instant::now(),
+            audio_manager: am,
+            sound_data: sd,
+            sound_handle: sh,
         };
     }
 }
 impl Interface for TerminalInterface {
-    fn update_inputs(&mut self, p: &mut Processor) -> bool {
+    fn update(&mut self, p: &mut Processor) -> bool {
         if self.input_dt.elapsed().as_micros() > 50 {
             let mut inputs = [false; 0x10];
             if poll(Duration::from_millis(1)).unwrap() {
@@ -60,6 +85,17 @@ impl Interface for TerminalInterface {
             }
             p.update_inputs(inputs);
             self.input_dt = Instant::now();
+        }
+        let tween = Tween {
+            start_time: kira::StartTime::Immediate,
+            duration: Duration::from_micros(0),
+            easing: kira::tween::Easing::Linear,
+        };
+        if p.get_st() > 0 && self.sound_handle.state() == PlaybackState::Paused {
+            self.sound_handle.resume(tween);
+        }
+        if p.get_st() == 0 && self.sound_handle.state() == PlaybackState::Playing {
+            self.sound_handle.pause(tween);
         }
         return false;
     }
