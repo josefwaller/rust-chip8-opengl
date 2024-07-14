@@ -95,7 +95,7 @@ fn main() {
                 let to_write = format!("{:#6X}", inst);
                 writeln!(
                     file.as_ref().unwrap(),
-                    "{:#6x} {}",
+                    "{:#5X} {}",
                     pc,
                     to_write[2..].to_string()
                 )

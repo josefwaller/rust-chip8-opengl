@@ -165,9 +165,9 @@ impl Processor {
                     3 => self.xor_rx_ry(rx, ry),
                     4 => self.add_rx_ry(rx, ry),
                     5 => self.sub_rx_ry(rx, ry),
-                    6 => self.shr(rx),
+                    6 => self.shr(rx, ry),
                     7 => self.subn(rx, ry),
-                    0xE => self.shl(rx),
+                    0xE => self.shl(rx, ry),
                     _ => self.unknown_opcode_panic(inst),
                 }
             }
@@ -263,32 +263,36 @@ impl Processor {
         self.registers[0xF] = if v > 0xFF { 1 } else { 0 };
     }
     fn sub_rx_ry(&mut self, rx: usize, ry: usize) {
-        self.registers[0xF] = if self.registers[ry] > self.registers[rx] {
-            1
-        } else {
+        let vf = if self.registers[ry] > self.registers[rx] {
             0
+        } else {
+            1
         };
         self.registers[rx] = self.registers[rx].wrapping_sub(self.registers[ry]);
+        self.registers[0xF] = vf;
     }
-    fn shr(&mut self, r: usize) {
-        self.registers[0xF] = if self.registers[r] & 0x01 == 1 { 1 } else { 0 };
-        self.registers[r] = self.registers[r] >> 1;
+    fn shr(&mut self, rx: usize, ry: usize) {
+        let vf = if self.registers[ry] & 0x01 == 1 { 1 } else { 0 };
+        self.registers[rx] = self.registers[ry] >> 1;
+        self.registers[0xF] = vf;
     }
     fn subn(&mut self, rx: usize, ry: usize) {
-        self.registers[0xF] = if self.registers[rx] > self.registers[ry] {
-            1
-        } else {
+        let vf = if self.registers[rx] > self.registers[ry] {
             0
+        } else {
+            1
         };
         self.registers[rx] = self.registers[ry].wrapping_sub(self.registers[rx]);
+        self.registers[0xF] = vf;
     }
-    fn shl(&mut self, r: usize) {
-        self.registers[0xF] = if self.registers[r] & 0x80 == 0x80 {
+    fn shl(&mut self, rx: usize, ry: usize) {
+        let vf = if self.registers[ry] & 0x80 == 0x80 {
             1
         } else {
             0
         };
-        self.registers[r] = self.registers[r] << 1;
+        self.registers[rx] = self.registers[ry] << 1;
+        self.registers[0xF] = vf;
     }
     fn clr(&mut self) {
         self.screen_buffer = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
@@ -302,7 +306,7 @@ impl Processor {
         self.pc = (addr - 2) as usize;
     }
     fn jmp_r0(&mut self, addr: u16) {
-        self.pc = (addr + self.registers[0] as u16) as usize;
+        self.pc = (addr + self.registers[0] as u16) as usize - 2;
     }
     fn call(&mut self, addr: u16) {
         self.stack[self.sp] = self.pc as u16;
@@ -360,7 +364,7 @@ impl Processor {
         for j in 0..(n + 1) {
             self.mem[(self.i + j as u16) as usize] = self.registers[j as usize];
         }
-        self.i += (n + 1) as u16;
+        //self.i += (n + 1) as u16;
     }
     fn add_i_r(&mut self, r: usize) {
         self.i = self.i.wrapping_add(self.registers[r] as u16);
