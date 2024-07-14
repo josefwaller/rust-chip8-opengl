@@ -485,8 +485,7 @@ mod tests {
             emu.execute(build_inst(0xF, x, 0x0, 0xA));
             assert_eq_hex!(emu.get_register_value(x), val_x);
             let new_val = rand_byte(0xF);
-            inputs[new_val as usize] = true;
-            emu.update_inputs(inputs);
+            emu.on_key_release(new_val as u8);
             emu.execute(build_inst(0xF, x, 0x0, 0xA));
             assert_eq_hex!(emu.get_register_value(x), new_val as u8);
         })

@@ -13,7 +13,7 @@ use kira::{
     manager::{AudioManager, AudioManagerSettings, DefaultBackend},
     sound::{
         static_sound::{StaticSoundData, StaticSoundHandle},
-        PlaybackState, SoundData,
+        PlaybackState,
     },
     tween::Tween,
 };
@@ -30,8 +30,6 @@ const KEY_MAP: [char; 16] = [
 pub struct TerminalInterface {
     stdout: Stdout,
     input_dt: Instant,
-    audio_manager: AudioManager,
-    sound_data: StaticSoundData,
     sound_handle: StaticSoundHandle,
 }
 
@@ -54,8 +52,6 @@ impl TerminalInterface {
         return TerminalInterface {
             stdout: stdout,
             input_dt: Instant::now(),
-            audio_manager: am,
-            sound_data: sd,
             sound_handle: sh,
         };
     }
@@ -81,6 +77,13 @@ impl Interface for TerminalInterface {
                         }
                     }
                     _ => {}
+                }
+            }
+            // Hacky-ish way to detect key up
+            for i in 0..0xF {
+                if !inputs[i] && p.get_input_state(i) {
+                    p.on_key_release(i as u8);
+                    break;
                 }
             }
             p.update_inputs(inputs);

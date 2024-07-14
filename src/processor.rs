@@ -44,6 +44,10 @@ pub struct Processor {
     input_state: [bool; 0x10],
     // debug print mode used in tests
     debug_print: bool,
+    // Key that was just released, should be set by the interface
+    // Used for LD X KP and nothing else
+    // Reset every execution
+    last_key_released: Option<u8>,
 }
 
 impl Processor {
@@ -60,6 +64,7 @@ impl Processor {
             st: 0,
             input_state: [false; 0x10],
             debug_print: false,
+            last_key_released: None,
         };
         (0..0x10).for_each(|i| c.mem[(6 * i)..(6 * i + 5)].copy_from_slice(&SPRITES[i]));
 
@@ -204,6 +209,7 @@ impl Processor {
             println!("Post state:");
             self.dump_state();
         }
+        self.last_key_released = None;
     }
 
     fn unknown_opcode_panic(&self, opcode: u16) {
@@ -348,8 +354,8 @@ impl Processor {
         }
     }
     fn ld_r_kp(&mut self, r: usize) {
-        match self.input_state.iter().enumerate().find(|(_i, v)| **v) {
-            Some((i, _v)) => self.registers[r] = i as u8,
+        match self.last_key_released {
+            Some(i) => self.registers[r] = i as u8,
             // Sneaky hack - in order to "wait" we just decrement PC so that we reach this addr again
             // In retrospect this probably isn't that sneaky
             None => self.pc -= 2,
@@ -443,6 +449,9 @@ impl Processor {
     }
     pub fn get_st(&self) -> u8 {
         return self.st;
+    }
+    pub fn on_key_release(&mut self, kp: u8) {
+        self.last_key_released = Some(kp);
     }
 }
 

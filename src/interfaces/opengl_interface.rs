@@ -183,9 +183,9 @@ impl Interface for OpenGlInterface {
     fn update(&mut self, p: &mut Processor) -> bool {
         let key_map = [
             glfw::Key::X,
-            glfw::Key::Kp1,
-            glfw::Key::Kp2,
-            glfw::Key::Kp3,
+            glfw::Key::Num1,
+            glfw::Key::Num2,
+            glfw::Key::Num3,
             glfw::Key::Q,
             glfw::Key::W,
             glfw::Key::E,
@@ -194,7 +194,7 @@ impl Interface for OpenGlInterface {
             glfw::Key::D,
             glfw::Key::Z,
             glfw::Key::C,
-            glfw::Key::Kp4,
+            glfw::Key::Num4,
             glfw::Key::R,
             glfw::Key::F,
             glfw::Key::V,
@@ -218,6 +218,9 @@ impl Interface for OpenGlInterface {
                                 glfw::Action::Press => true,
                                 glfw::Action::Release => false,
                                 _ => self.input_states[i],
+                            };
+                            if action == glfw::Action::Release {
+                                p.on_key_release(i as u8);
                             }
                         }
                         _ => {}
