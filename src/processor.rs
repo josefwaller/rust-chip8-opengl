@@ -248,15 +248,19 @@ impl Processor {
 
     fn or_rx_ry(&mut self, rx: usize, ry: usize) {
         self.registers[rx] = self.registers[rx] | self.registers[ry];
+        self.registers[0xF] = 0x0;
     }
 
     fn and_rx_ry(&mut self, rx: usize, ry: usize) {
         self.registers[rx] = self.registers[rx] & self.registers[ry];
+        self.registers[0xF] = 0x0;
     }
 
     fn xor_rx_ry(&mut self, rx: usize, ry: usize) {
         self.registers[rx] = self.registers[rx] ^ self.registers[ry];
+        self.registers[0xF] = 0x0;
     }
+
     fn add_rx_ry(&mut self, rx: usize, ry: usize) {
         let v = self.registers[rx] as u16 + self.registers[ry] as u16;
         self.registers[rx] = v as u8;
@@ -364,7 +368,7 @@ impl Processor {
         for j in 0..(n + 1) {
             self.mem[(self.i + j as u16) as usize] = self.registers[j as usize];
         }
-        //self.i += (n + 1) as u16;
+        self.i += (n + 1) as u16;
     }
     fn add_i_r(&mut self, r: usize) {
         self.i = self.i.wrapping_add(self.registers[r] as u16);

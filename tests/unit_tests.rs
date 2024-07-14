@@ -119,7 +119,7 @@ mod tests {
         stress_test(|emu, vx, _vy, _val_x, _val_y| {
             emu.execute(build_inst(8, vx, vx, 5));
             assert_eq_hex!(emu.get_register_value(vx), 0);
-            assert_eq_hex!(emu.get_register_value(0xF), 0);
+            assert_eq_hex!(emu.get_register_value(0xF), 1);
         });
     }
     #[test]
@@ -127,13 +127,13 @@ mod tests {
         stress_test(|emu, x, y, val_x, val_y| {
             emu.execute(build_inst(0x8, y, x, 5));
             assert_eq_hex!(emu.get_register_value(y), val_y.wrapping_sub(val_x));
-            assert_eq_hex!(emu.get_register_value(0xF), 1);
+            assert_eq_hex!(emu.get_register_value(0xF), 0);
         })
     }
     #[test]
     fn test_shr() {
         stress_test(|emu, vx, vy, val_x, val_y| {
-            emu.execute(build_inst(8, vx, vy, 6));
+            emu.execute(build_inst(8, vx, vx, 6));
             assert_eq_hex!(emu.get_register_value(vx), val_x >> 1);
             assert_eq_hex!(emu.get_register_value(0xF), val_x & 1);
             // Check vy is not changed
@@ -145,7 +145,7 @@ mod tests {
         stress_test(|emu, x, y, val_x, val_y| {
             emu.execute(build_inst(8, y, x, 7));
             assert_eq_hex!(emu.get_register_value(y), val_x - val_y);
-            assert_eq_hex!(emu.get_register_value(0xF), 0x0);
+            assert_eq_hex!(emu.get_register_value(0xF), 0x1);
         })
     }
     #[test]
@@ -153,7 +153,7 @@ mod tests {
         stress_test(|emu, x, _y, _val_x, _val_y| {
             emu.execute(build_inst(8, x, x, 7));
             assert_eq_hex!(emu.get_register_value(x), 0);
-            assert_eq_hex!(emu.get_register_value(0xF), 0);
+            assert_eq_hex!(emu.get_register_value(0xF), 1);
         });
     }
     #[test]
@@ -161,13 +161,13 @@ mod tests {
         stress_test(|emu, x, y, val_x, val_y| {
             emu.execute(build_inst(8, x, y, 7));
             assert_eq_hex!(emu.get_register_value(x), val_y.wrapping_sub(val_x));
-            assert_eq_hex!(emu.get_register_value(0xF), 0x1);
+            assert_eq_hex!(emu.get_register_value(0xF), 0x0);
         })
     }
     #[test]
     fn test_shl() {
         stress_test(|emu, x, y, val_x, _val_y| {
-            emu.execute(build_inst(8, x, y, 0xE));
+            emu.execute(build_inst(8, x, x, 0xE));
             assert_eq_hex!(emu.get_register_value(x), val_x << 1);
             assert_eq_hex!(
                 emu.get_register_value(0xF),
@@ -281,7 +281,8 @@ mod tests {
                 emu.execute(build_inst(0x6, j, r >> 4, r));
             }
             emu.execute(build_inst(0xF, x, 5, 5));
-            assert_eq_hex!(emu.get_i(), i);
+            // + 1 since we always save registers v0..vx INCLUSIVE
+            assert_eq_hex!(emu.get_i(), i + x as u16 + 1);
             for j in 0..(x + 1) as usize {
                 assert_eq_hex!(exp_mem[j], emu.get_mem_at(i as usize + j));
                 assert_eq_hex!(exp_mem[j], emu.get_register_value(j as u8));
@@ -317,7 +318,7 @@ mod tests {
             // Reset I
             emu.execute(build_inst(0xA, (i >> 8) as u8, (i >> 4) as u8, i as u8));
             emu.execute(build_inst(0xF, x, 6, 5));
-            assert_eq_hex!(emu.get_i(), i);
+            assert_eq_hex!(emu.get_i(), i + x as u16 + 1);
             for j in 0..(x + 1) as usize {
                 assert_eq_hex!(exp_mem[j], emu.get_mem_at(i as usize + j));
                 assert_eq_hex!(exp_mem[j], emu.get_register_value(j as u8));
@@ -379,6 +380,7 @@ mod tests {
     #[test]
     fn test_drw() {
         stress_test(|emu, x, y, _val_x, _val_y| {
+            emu.execute(0xA200);
             // Choose a random amount to XOR
             let n = rand_byte(64 / 8) as u8;
             // Set mem[I] to something
@@ -389,6 +391,7 @@ mod tests {
                 emu.execute(build_inst(0x6, i as u8, v >> 4, v));
             }
             emu.execute(build_inst(0xF, n, 0x5, 0x5));
+            emu.execute(0xA200);
             // Choose a random location
             let px: u8 = rand_byte(64) as u8;
             let py = rand_byte(32) as u8;
@@ -404,7 +407,7 @@ mod tests {
             // Check memory was XORed
             (0..n as usize * 8).for_each(|i| {
                 let v = (spr[i as usize / 8] << (i % 8) & 0x80) != 0;
-                assert_eq_hex!(
+                assert_eq!(
                     emu.get_pixel_at(px + (i % 8) as u8, py + (i / 8) as u8),
                     prev_screen[i as usize] ^ v
                 );
