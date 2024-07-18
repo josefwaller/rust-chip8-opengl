@@ -20,7 +20,7 @@ use kira::{
 
 use std::{
     io::{stdout, Stdout, Write},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 const KEY_MAP: [char; 16] = [
@@ -29,7 +29,6 @@ const KEY_MAP: [char; 16] = [
 
 pub struct TerminalInterface {
     stdout: Stdout,
-    input_dt: Instant,
     sound_handle: StaticSoundHandle,
 }
 
@@ -51,44 +50,47 @@ impl TerminalInterface {
 
         return TerminalInterface {
             stdout: stdout,
-            input_dt: Instant::now(),
             sound_handle: sh,
         };
     }
 }
 impl Interface for TerminalInterface {
     fn update(&mut self, p: &mut Processor) -> bool {
-        if self.input_dt.elapsed().as_micros() > 50 {
-            let mut inputs = [false; 0x10];
-            if poll(Duration::from_millis(1)).unwrap() {
-                match read().unwrap() {
-                    Event::Key(evt) => {
-                        if evt.code == KeyCode::Char('c')
-                            && evt.modifiers.contains(KeyModifiers::CONTROL)
-                        {
-                            return true;
-                        }
-                        match evt.code {
-                            KeyCode::Char(c) => match KEY_MAP.iter().position(|ch| *ch == c) {
-                                Some(i) => inputs[i] = true,
-                                None => {}
-                            },
-                            _ => {}
-                        }
+        let mut inputs: [bool; 0x10] = core::array::from_fn(|i| p.get_input_state(i));
+        if poll(Duration::from_millis(0)).unwrap() {
+            match read().unwrap() {
+                Event::Key(evt) => {
+                    if evt.code == KeyCode::Char('c')
+                        && evt.modifiers.contains(KeyModifiers::CONTROL)
+                    {
+                        return true;
                     }
-                    _ => {}
+                    // For Terminal, we toggle the keys instead of detecting key up/key down
+                    match evt.code {
+                        KeyCode::Char(c) => match KEY_MAP.iter().position(|ch| *ch == c) {
+                            Some(i) => {
+                                inputs[i] = !inputs[i];
+                                if !inputs[i] {
+                                    p.on_key_release(i as u8);
+                                }
+                            }
+                            None => {}
+                        },
+                        _ => {}
+                    }
                 }
-            }
-            // Hacky-ish way to detect key up
-            for i in 0..0xF {
-                if !inputs[i] && p.get_input_state(i) {
-                    p.on_key_release(i as u8);
-                    break;
-                }
+                _ => {}
             }
             p.update_inputs(inputs);
-            self.input_dt = Instant::now();
         }
+        // Hacky-ish way to detect key up
+        for i in 0..0xF {
+            if !inputs[i] && p.get_input_state(i) {
+                p.on_key_release(i as u8);
+                break;
+            }
+        }
+        p.update_inputs(inputs);
         let tween = Tween {
             start_time: kira::StartTime::Immediate,
             duration: Duration::from_micros(0),
