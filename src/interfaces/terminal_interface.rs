@@ -27,6 +27,10 @@ const KEY_MAP: [char; 16] = [
     'x', '1', '2', '3', 'q', 'w', 'e', 'a', 's', 'd', 'z', 'c', '4', 'r', 'f', 'v',
 ];
 
+/**
+ * An interface that uses the terminal.
+ * Mostly useful for debugging purposes.
+ */
 pub struct TerminalInterface {
     stdout: Stdout,
     sound_handle: StaticSoundHandle,

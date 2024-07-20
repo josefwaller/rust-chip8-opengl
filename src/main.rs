@@ -7,13 +7,11 @@ use interfaces::{Interface, OpenGlInterface, TerminalInterface};
 use clap::{Parser, ValueEnum};
 use processor::Processor;
 use std::boxed::Box;
-use std::thread;
 use std::time::Instant;
 use std::{
     fs,
     fs::{File, OpenOptions},
     io::{self, Write},
-    time::Duration,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -74,10 +72,14 @@ fn main() {
         disable_raw_mode().unwrap();
         loop {
             interface.render(&p);
-            print!("Enter a command: ");
+            print!("Enter a command (or exit to exit): ");
             io::stdout().flush().unwrap();
             let mut str = String::new();
             io::stdin().read_line(&mut str).unwrap();
+            if str == String::from("exit\n") {
+                interface.exit();
+                return;
+            }
             let hex = u16::from_str_radix(str.trim(), 16).unwrap();
             p.execute(hex);
         }

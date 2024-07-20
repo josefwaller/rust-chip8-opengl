@@ -36,6 +36,9 @@ void main() {
 }
 "#;
 
+/**
+ * Interface that uses OpenGL to render the processor.
+ */
 impl OpenGlInterface {
     pub fn new() -> OpenGlInterface {
         // glfw: initialize and configure

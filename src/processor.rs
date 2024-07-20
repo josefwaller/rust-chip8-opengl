@@ -3,6 +3,7 @@ use rand::Rng;
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 
+/// The sprites for the digits 0-F, as bytes
 pub const SPRITES: [[u8; 5]; 16] = [
     [0xF0, 0x90, 0x90, 0x90, 0xF0],
     [0x00, 0x60, 0x20, 0x20, 0x70],
@@ -22,6 +23,11 @@ pub const SPRITES: [[u8; 5]; 16] = [
     [0xF0, 0x80, 0xF0, 0x80, 0x80],
 ];
 
+/**
+ * The actual CHIP-8 processor.
+ * Decodes and runs any opcodes, stores memory, stores screen.
+ * Needs to be paired with an interface to allow the user to actually interact with the program.
+ */
 pub struct Processor {
     // Buffer for the screen
     screen_buffer: [bool; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -70,19 +76,19 @@ impl Processor {
 
         return c;
     }
-    /*
+    /**
      * Load a program into memory
-     */
+     **/
     pub fn load_program(&mut self, program: &[u8]) {
         program
             .iter()
             .enumerate()
             .for_each(|(i, v)| self.mem[0x200 + i] = *v);
     }
-    /*
-     * Load a program as u16s instead of u8s
-     * Mostly just a convenience function
-     */
+    /**
+     * Load a program as u16s instead of u8s.
+     * Mostly just a convenience function.
+     **/
     #[allow(dead_code)]
     pub fn load_program_u16(&mut self, program: &[u16]) {
         (0..program.len()).for_each(|i| {
@@ -90,32 +96,32 @@ impl Processor {
             self.mem[0x200 + 2 * i + 1] = program[i] as u8;
         });
     }
-    /*
-     * Perform the next step in whatever program has been loaded into memory
-     */
+    /**
+     * Perform the next step in whatever program has been loaded into memory.
+     * Equivalent to just calling `execute` and incrementing `PC` by 2
+     **/
     pub fn step(&mut self) {
         self.execute(((self.mem[self.pc] as u16) << 8) | self.mem[self.pc + 1] as u16);
         self.pc += 2;
     }
-    /*
-     * Function that updates the timers assuming that exactly 1/60th of a second has gone by
-     * Useful for applications where measuring time is flaky and we want to make sure the DT and ST are decreasing
-     */
+    /**
+     * Function that decrements both timer registers.
+     * Should be called at a rate of 60Hz.
+     **/
     pub fn on_tick(&mut self) {
         self.dt = self.dt.saturating_sub(1);
         self.st = self.st.saturating_sub(1);
     }
-    /*
-     * Update the current input states
-     * i.e. Set a button as pressed or not
-     */
+    /**
+     * Update the current input states to the inputs given.
+     **/
     pub fn update_inputs(&mut self, inputs: [bool; 0x10]) {
         self.input_state = inputs;
     }
-    /*
-     * Executes a single instruction
-     * Does not increment PC or affect DT or ST
-     */
+    /**
+     * Executes a single given instruction.
+     * Does not increment PC or affect DT or ST.
+     **/
     pub fn execute(&mut self, inst: u16) {
         if self.debug_print {
             println!("Inst is {:X}", inst);
@@ -208,6 +214,9 @@ impl Processor {
         panic!("Unknown opcode '{:04X}' provided!", opcode);
     }
 
+    /**
+     * Print the state of the machine (all registers, stack, PC, etc) in the console.
+     */
     pub fn dump_state(&self) {
         for i in 0..16 {
             print!("V{:X} = {:#2X}, ", i, self.registers[i])
@@ -417,31 +426,48 @@ impl Processor {
         self.mem[self.i as usize + 2] = self.registers[r] % 10;
     }
 
+    /// Get the value of an R register
     pub fn get_register_value(&self, register: u8) -> u8 {
         return self.registers[register as usize];
     }
+    /// Get the value of the program counter
     pub fn get_program_counter(&self) -> usize {
         return self.pc;
     }
+    /// Get the value of the I register
     pub fn get_i(&self) -> u16 {
         return self.i;
     }
+    /// Get a single byte of memory at the address given
     pub fn get_mem_at(&self, addr: usize) -> u8 {
         return self.mem[addr];
     }
+    /**
+     * Get a pixel at the given `x, y` position on the screen.
+     * Accounts for screen wrapping.
+     */
     pub fn get_pixel_at(&self, x: u8, y: u8) -> bool {
         return self.screen_buffer
             [((x as usize % 64) + y as usize * 64) % self.screen_buffer.len()];
     }
+    /**
+     * Return whether the processor has the `i` key currently being pressed.
+     * This should be set by calls to `update_inputs`.
+     */
     pub fn get_input_state(&self, i: usize) -> bool {
         return self.input_state[i];
     }
+    /// Get the D timer register.
     pub fn get_dt(&self) -> u8 {
         return self.dt;
     }
+    /// Get the S (sound) time register.
     pub fn get_st(&self) -> u8 {
         return self.st;
     }
+    /**
+     * Method that should be called by an interface whenever a key (0-F) is released.
+     */
     pub fn on_key_release(&mut self, kp: u8) {
         self.last_key_released = Some(kp);
     }
