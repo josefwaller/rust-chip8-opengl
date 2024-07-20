@@ -166,7 +166,7 @@ mod tests {
     }
     #[test]
     fn test_shl() {
-        stress_test(|emu, x, y, val_x, _val_y| {
+        stress_test(|emu, x, _y, val_x, _val_y| {
             emu.execute(build_inst(8, x, x, 0xE));
             assert_eq_hex!(emu.get_register_value(x), val_x << 1);
             assert_eq_hex!(
@@ -480,7 +480,7 @@ mod tests {
     #[test]
     fn test_ld_vx_kp() {
         stress_test(|emu, x, _y, val_x, _val_y| {
-            let mut inputs = [false; 0x10];
+            let inputs = [false; 0x10];
             emu.update_inputs(inputs);
             emu.execute(build_inst(0xF, x, 0x0, 0xA));
             assert_eq_hex!(emu.get_register_value(x), val_x);

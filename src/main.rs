@@ -85,6 +85,7 @@ fn main() {
     let data: Vec<u8> = fs::read(args.file.clone()).unwrap();
     p.load_program(data.as_slice());
     let mut dt = Instant::now();
+    let mut rt = Instant::now();
     let mut last_pc: usize = 0x0000;
     loop {
         let pc = p.get_program_counter();
@@ -109,17 +110,17 @@ fn main() {
             break;
         }
 
-        // For in console version, this is more reliable
+        // Update clock
         if dt.elapsed().as_millis() >= 1000 / 60 {
             p.on_tick();
             dt = Instant::now();
         }
-        // Only rerender if we ran a render command
-        let just_ran = p.get_mem_at(pc);
-        if just_ran & 0xF0 == 0xD0 || just_ran == 0x00 {
+
+        // Render at 60Hz
+        if rt.elapsed().as_millis() >= 60 {
             interface.render(&p);
+            rt = Instant::now();
         }
-        thread::sleep(Duration::from_micros(10));
     }
     interface.exit();
 }

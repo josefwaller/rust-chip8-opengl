@@ -98,14 +98,6 @@ impl Processor {
         self.pc += 2;
     }
     /*
-     * Update the DT and ST registers given the amount of time that has elapsed in nanoseconds
-     */
-    pub fn update_timers(&mut self, dt_micros: u128) {
-        let change: u8 = (dt_micros * 60 / 100000) as u8;
-        self.dt = self.dt.saturating_sub(change);
-        self.st = self.st.saturating_sub(change);
-    }
-    /*
      * Function that updates the timers assuming that exactly 1/60th of a second has gone by
      * Useful for applications where measuring time is flaky and we want to make sure the DT and ST are decreasing
      */
