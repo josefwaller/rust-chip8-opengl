@@ -1,5 +1,9 @@
 [package]
 name = "rust-chip8-opengl"
+description = "A CHIP-8 emulator written in rust. Can be ran as a CLI rendering either to the terminal or using GLFW."
+license = "MIT"
+repository = "https://github.com/josefwaller/rust-chip8-opengl"
+readme = "README.md"
 version = "1.0.0"
 edition = "2021"
 

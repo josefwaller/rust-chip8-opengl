@@ -54,7 +54,7 @@ impl OpenGlInterface {
         // glfw window creation
         // --------------------
         let (mut window, events) = glfw
-            .create_window(800, 600, "LearnOpenGL", glfw::WindowMode::Windowed)
+            .create_window(800, 600, "CHIP-8", glfw::WindowMode::Windowed)
             .expect("Failed to create GLFW window");
 
         gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
