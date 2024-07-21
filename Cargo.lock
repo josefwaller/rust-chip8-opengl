@@ -1012,7 +1012,7 @@ dependencies = [
 
 [[package]]
 name = "rust-chip8-opengl"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "assert_hex",
  "beryllium",
