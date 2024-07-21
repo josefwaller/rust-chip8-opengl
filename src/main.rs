@@ -35,7 +35,7 @@ impl ToString for Mode {
 
 #[derive(Parser, Debug)]
 #[command(name = "Rust CHIP-8 OpenGl")]
-#[command(version = "0.1")]
+#[command(version = "1.0.3")]
 #[command(about = "Simulate running CHIP-8 programs", long_about = None)]
 struct Args {
     // UI to use
