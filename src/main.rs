@@ -1,8 +1,13 @@
 mod interfaces;
 mod processor;
 
+#[cfg(feature = "terminal")]
 use crossterm::terminal::disable_raw_mode;
-use interfaces::{Interface, OpenGlInterface, TerminalInterface};
+use interfaces::Interface;
+#[cfg(feature = "open-gl")]
+use interfaces::OpenGlInterface;
+#[cfg(feature = "terminal")]
+use interfaces::TerminalInterface;
 
 use clap::{Parser, ValueEnum};
 use processor::Processor;
@@ -41,7 +46,7 @@ struct Args {
     mode: Mode,
 
     // File to read
-    #[arg(short, long, default_value_t = String::new())]
+    #[arg(short, long)]
     file: String,
 
     // Optional debug output file, to write all the instructions the processor runs through
@@ -49,11 +54,21 @@ struct Args {
     debug_file: String,
 }
 
+#[allow(unreachable_code)]
+#[allow(unused_variables)]
 fn main() {
     let args = Args::parse();
     let mut p = Processor::new();
+    #[cfg(all(not(feature = "terminal"), not(feature = "open-gl")))]
+    panic!("No features enabled, enable one during compilation to use an interface");
     let mut interface: Box<dyn Interface> = match args.mode {
+        #[cfg(not(feature = "terminal"))]
+        Mode::Terminal => panic!("'terminal' feature needs to be enabled to use TerminalInterface"),
+        #[cfg(feature = "terminal")]
         Mode::Terminal => Box::new(TerminalInterface::new()),
+        #[cfg(not(feature = "open-gl"))]
+        Mode::OpenGl => panic!("'open-gl' feature needs to be enabled to use OpenGlInterface"),
+        #[cfg(feature = "open-gl")]
         Mode::OpenGl => Box::new(OpenGlInterface::new()),
     };
 
@@ -67,22 +82,6 @@ fn main() {
                 .unwrap(),
         );
         writeln!(file.as_ref().unwrap(), "BEGINNING OF OPCODE RECORD:").unwrap();
-    }
-    if args.file.is_empty() {
-        disable_raw_mode().unwrap();
-        loop {
-            interface.render(&p);
-            print!("Enter a command (or exit to exit): ");
-            io::stdout().flush().unwrap();
-            let mut str = String::new();
-            io::stdin().read_line(&mut str).unwrap();
-            if str == String::from("exit\n") {
-                interface.exit();
-                return;
-            }
-            let hex = u16::from_str_radix(str.trim(), 16).unwrap();
-            p.execute(hex);
-        }
     }
     let data: Vec<u8> = fs::read(args.file.clone()).unwrap();
     p.load_program(data.as_slice());

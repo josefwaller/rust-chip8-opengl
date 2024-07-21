@@ -8,7 +8,13 @@ Can be used both as a standalone application, running CHIP-8 ROMs in terminal or
 or as a library to simulate a CHIP-8 processor.
 
 ## Install
-`cargo install rust-chip8-opengl`
+`cargo install rust-chip8-opengl --all-features`
+
+Or install it with only one interface:
+
+`cargo install rust-chip8-opengl --features terminal`
+
+`cargo install rust-chip8-opengl --features open-gl`
 
 ## Usage
 ### Usage as an emulator

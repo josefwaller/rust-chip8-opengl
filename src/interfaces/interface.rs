@@ -1,6 +1,3 @@
-extern crate gl;
-extern crate glfw;
-
 use crate::processor::Processor;
 
 /**
