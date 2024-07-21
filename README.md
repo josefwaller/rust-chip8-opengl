@@ -49,7 +49,7 @@ have to press `W` again to release the key.
 `cargo add rust-chip8-opengl`
 
 Example code:
-```
+```rust
 extern crate rust_chip8_opengl;
 
 use rust_chip8_opengl::processor::Processor;
