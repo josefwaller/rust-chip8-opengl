@@ -3,7 +3,15 @@ use crate::processor::Processor;
 
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLuint};
 use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
-use std::{array, ffi::CString, mem, os::raw::c_void, ptr};
+use kira::{
+    manager::{AudioManager, AudioManagerSettings, DefaultBackend},
+    sound::{
+        static_sound::{StaticSoundData, StaticSoundHandle},
+        PlaybackState,
+    },
+    tween::Tween,
+};
+use std::{array, ffi::CString, mem, os::raw::c_void, ptr, time::Duration};
 
 pub struct OpenGlInterface {
     glfw: Glfw,
@@ -11,6 +19,7 @@ pub struct OpenGlInterface {
     window: PWindow,
     cbo: GLuint,
     input_states: [bool; 0x10],
+    sound_handle: StaticSoundHandle,
 }
 const VERTEX_SHADER: &str = r#"
 #version 330 core
@@ -171,12 +180,24 @@ impl OpenGlInterface {
             gl::Hint(gl::LINE_SMOOTH_HINT, gl::DONT_CARE);
         }
 
+        let mut am = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
+        let sd = StaticSoundData::from_file("sound.ogg").unwrap();
+        let mut sh = am.play(sd.clone()).unwrap();
+        let tween = Tween {
+            start_time: kira::StartTime::Immediate,
+            duration: Duration::from_micros(0),
+            easing: kira::tween::Easing::Linear,
+        };
+        sh.set_loop_region(0.025..0.075);
+        sh.pause(tween);
+
         OpenGlInterface {
             glfw,
             events,
             window,
             cbo: cbo,
             input_states: [false; 0x10],
+            sound_handle: sh,
         }
     }
 }
@@ -275,6 +296,19 @@ impl Interface for OpenGlInterface {
 
         // Refresh page
         self.window.swap_buffers();
+
+        // Update sound
+        let tween = Tween {
+            start_time: kira::StartTime::Immediate,
+            duration: Duration::from_micros(0),
+            easing: kira::tween::Easing::Linear,
+        };
+        if p.get_st() > 0 && self.sound_handle.state() == PlaybackState::Paused {
+            self.sound_handle.resume(tween);
+        }
+        if p.get_st() == 0 && self.sound_handle.state() == PlaybackState::Playing {
+            self.sound_handle.pause(tween);
+        }
     }
 }
 
