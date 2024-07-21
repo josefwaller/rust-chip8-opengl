@@ -248,7 +248,7 @@ impl Interface for OpenGlInterface {
                 let x = (i / 3 / 4) % 64;
                 let y = (i / 3 / 4) / 64;
                 // Our screen starts at the top left
-                return if p.get_pixel_at(x as u8, 64 - y as u8) {
+                return if p.get_pixel_at(x as u8, 63 - y as u8) {
                     1
                 } else {
                     0
