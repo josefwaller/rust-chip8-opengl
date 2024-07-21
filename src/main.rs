@@ -29,9 +29,8 @@ impl ToString for Mode {
     }
 }
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
-#[command(name = "Rust CHIP-8 Simulator")]
+#[command(name = "Rust CHIP-8 OpenGl")]
 #[command(version = "0.1")]
 #[command(about = "Simulate running CHIP-8 programs", long_about = None)]
 struct Args {
