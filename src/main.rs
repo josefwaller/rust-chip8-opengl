@@ -1,8 +1,6 @@
 mod interfaces;
 mod processor;
 
-#[cfg(feature = "terminal")]
-use crossterm::terminal::disable_raw_mode;
 use interfaces::Interface;
 #[cfg(feature = "open-gl")]
 use interfaces::OpenGlInterface;
@@ -17,7 +15,7 @@ use std::time::{Duration, Instant};
 use std::{
     fs,
     fs::{File, OpenOptions},
-    io::{self, Write},
+    io::Write,
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]

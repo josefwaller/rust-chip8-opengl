@@ -1,17 +1,13 @@
 use crate::interfaces::Interface;
 use crate::processor::Processor;
 
+extern crate rodio;
+
+use rodio::{source::SineWave, OutputStream, Sink};
+
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLuint};
 use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
-use kira::{
-    manager::{AudioManager, AudioManagerSettings, DefaultBackend},
-    sound::{
-        static_sound::{StaticSoundData, StaticSoundHandle},
-        PlaybackState,
-    },
-    tween::Tween,
-};
-use std::{array, ffi::CString, mem, os::raw::c_void, ptr, time::Duration};
+use std::{array, ffi::CString, mem, os::raw::c_void, ptr};
 
 pub struct OpenGlInterface {
     glfw: Glfw,
@@ -19,7 +15,10 @@ pub struct OpenGlInterface {
     window: PWindow,
     cbo: GLuint,
     input_states: [bool; 0x10],
-    sound_handle: StaticSoundHandle,
+    sink: Option<Sink>,
+    // Stream just needs to be kept in scope
+    #[allow(dead_code)]
+    stream: Option<OutputStream>,
 }
 const VERTEX_SHADER: &str = r#"
 #version 330 core
@@ -179,17 +178,18 @@ impl OpenGlInterface {
             gl::Hint(gl::POLYGON_SMOOTH_HINT, gl::DONT_CARE);
             gl::Hint(gl::LINE_SMOOTH_HINT, gl::DONT_CARE);
         }
-
-        let mut am = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
-        let sd = StaticSoundData::from_file("sound.ogg").unwrap();
-        let mut sh = am.play(sd.clone()).unwrap();
-        let tween = Tween {
-            start_time: kira::StartTime::Immediate,
-            duration: Duration::from_micros(0),
-            easing: kira::tween::Easing::Linear,
+        let device = OutputStream::try_default().ok();
+        let sink = match &device {
+            Some(d) => Sink::try_new(&d.1)
+                .and_then(|s| {
+                    s.set_volume(0.1);
+                    s.append(SineWave::new(350.0));
+                    s.pause();
+                    return Ok(s);
+                })
+                .ok(),
+            None => panic!("No sound!"),
         };
-        sh.set_loop_region(0.025..0.075);
-        sh.pause(tween);
 
         OpenGlInterface {
             glfw,
@@ -197,7 +197,8 @@ impl OpenGlInterface {
             window,
             cbo: cbo,
             input_states: [false; 0x10],
-            sound_handle: sh,
+            sink,
+            stream: device.and_then(|d| Some(d.0)),
         }
     }
 }
@@ -254,6 +255,16 @@ impl Interface for OpenGlInterface {
             }
         }
         p.update_inputs(self.input_states);
+        match &self.sink {
+            Some(s) => {
+                if s.is_paused() && p.get_st() > 0 {
+                    s.play();
+                } else if !s.is_paused() && p.get_st() == 0 {
+                    s.pause();
+                }
+            }
+            None => {}
+        }
         return self.window.should_close();
     }
     fn render(&mut self, p: &Processor) {
@@ -296,19 +307,6 @@ impl Interface for OpenGlInterface {
 
         // Refresh page
         self.window.swap_buffers();
-
-        // Update sound
-        let tween = Tween {
-            start_time: kira::StartTime::Immediate,
-            duration: Duration::from_micros(0),
-            easing: kira::tween::Easing::Linear,
-        };
-        if p.get_st() > 0 && self.sound_handle.state() == PlaybackState::Paused {
-            self.sound_handle.resume(tween);
-        }
-        if p.get_st() == 0 && self.sound_handle.state() == PlaybackState::Playing {
-            self.sound_handle.pause(tween);
-        }
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::interfaces::Interface;
 use crate::processor::Processor;
 extern crate crossterm;
-extern crate kira;
+extern crate rodio;
 
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
@@ -9,14 +9,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand,
 };
-use kira::{
-    manager::{AudioManager, AudioManagerSettings, DefaultBackend},
-    sound::{
-        static_sound::{StaticSoundData, StaticSoundHandle},
-        PlaybackState,
-    },
-    tween::Tween,
-};
+use rodio::{source::SineWave, OutputStream, Sink};
 
 use std::{
     io::{stdout, Stdout, Write},
@@ -33,7 +26,10 @@ const KEY_MAP: [char; 16] = [
  */
 pub struct TerminalInterface {
     stdout: Stdout,
-    sound_handle: StaticSoundHandle,
+    sink: Option<rodio::Sink>,
+    // Stream just needs to be kept in scope
+    #[allow(dead_code)]
+    stream: Option<rodio::OutputStream>,
 }
 
 impl TerminalInterface {
@@ -41,20 +37,22 @@ impl TerminalInterface {
         let mut stdout = stdout();
         enable_raw_mode().unwrap();
         stdout.execute(Hide).unwrap();
-        let mut am = AudioManager::<DefaultBackend>::new(AudioManagerSettings::default()).unwrap();
-        let sd = StaticSoundData::from_file("sound.ogg").unwrap();
-        let mut sh = am.play(sd.clone()).unwrap();
-        let tween = Tween {
-            start_time: kira::StartTime::Immediate,
-            duration: Duration::from_micros(0),
-            easing: kira::tween::Easing::Linear,
+        let device = OutputStream::try_default().ok();
+        let sink = match &device {
+            Some(d) => Sink::try_new(&d.1)
+                .and_then(|s| {
+                    s.set_volume(0.1);
+                    s.append(SineWave::new(350.0));
+                    s.pause();
+                    return Ok(s);
+                })
+                .ok(),
+            None => panic!("No sound!"),
         };
-        sh.set_loop_region(0.025..0.075);
-        sh.pause(tween);
-
         return TerminalInterface {
-            stdout: stdout,
-            sound_handle: sh,
+            stdout,
+            sink,
+            stream: device.and_then(|d| Some(d.0)),
         };
     }
 }
@@ -95,16 +93,15 @@ impl Interface for TerminalInterface {
             }
         }
         p.update_inputs(inputs);
-        let tween = Tween {
-            start_time: kira::StartTime::Immediate,
-            duration: Duration::from_micros(0),
-            easing: kira::tween::Easing::Linear,
-        };
-        if p.get_st() > 0 && self.sound_handle.state() == PlaybackState::Paused {
-            self.sound_handle.resume(tween);
-        }
-        if p.get_st() == 0 && self.sound_handle.state() == PlaybackState::Playing {
-            self.sound_handle.pause(tween);
+        match &self.sink {
+            Some(s) => {
+                if s.is_paused() && p.get_st() > 0 {
+                    s.play();
+                } else if !s.is_paused() && p.get_st() == 0 {
+                    s.pause();
+                }
+            }
+            None => {}
         }
         return false;
     }
