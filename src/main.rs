@@ -7,7 +7,8 @@ use interfaces::{Interface, OpenGlInterface, TerminalInterface};
 use clap::{Parser, ValueEnum};
 use processor::Processor;
 use std::boxed::Box;
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 use std::{
     fs,
     fs::{File, OpenOptions},
@@ -87,6 +88,7 @@ fn main() {
     p.load_program(data.as_slice());
     let mut dt = Instant::now();
     let mut rt = Instant::now();
+    let mut ct = Instant::now();
     let mut last_pc: usize = 0x0000;
     loop {
         let pc = p.get_program_counter();
@@ -122,6 +124,10 @@ fn main() {
             interface.render(&p);
             rt = Instant::now();
         }
+        // Clock speed in Hz
+        let clock_speed = 1000;
+        thread::sleep(Duration::from_millis(1000 / clock_speed).saturating_sub(ct.elapsed()));
+        ct = Instant::now();
     }
     interface.exit();
 }
