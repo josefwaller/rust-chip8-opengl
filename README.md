@@ -20,6 +20,30 @@ Available options:
 * `-m, --mode [MODE]`: The mode to run the emulator in, either `terminal` or `open-gl`.
 * `--debug-file [FILE]`: The file to log the opcodes to. If omitted, no opcodes are logged.
 
+Key map:
+
+| CHIP-8 Key | Keyboard Key |
+-----------------------------
+| 0 | x |
+| 1 | 1 |
+| 2 | 2 |
+| 3 | 3 | 
+| 4 | Q |
+| 5 | W |
+| 6 | E |
+| 7 | A |
+| 8 | S |
+| 9 | D |
+| A | Z |
+| B | C |
+| C | 4 |
+| D | R |
+| E | F |
+| F | V |
+
+Note that if ran in terminal mode, each keypress will toggle that key being on.
+So pressing `W` would toggle the chip's `5` key, and the user would
+have to press `W` again to release the key.
 ### Usage as a library
 TBA
 
