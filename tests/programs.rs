@@ -27,7 +27,7 @@ mod tests {
         // run program
         emu.load_program_u16(&PROGRAM);
         while emu.get_program_counter() != 0x002 {
-            emu.step();
+            emu.step().unwrap();
         }
         // Check the memory
         let mut a = 1;
@@ -47,7 +47,7 @@ mod tests {
         ];
         emu.load_program_u16(&PROGRAM);
         while emu.get_program_counter() != 0x002 {
-            emu.step();
+            emu.step().unwrap();
         }
         const SMILEY: [[bool; 8]; 4] = [
             [false, true, false, false, false, false, true, false],
@@ -67,12 +67,12 @@ mod tests {
         const PROGRAM: [u16; 7] = [0x6000, 0x6101, 0x00E0, 0xF029, 0xD005, 0x8014, 0x1204];
         emu.load_program_u16(&PROGRAM);
         // 2 instruction setup
-        emu.step();
-        emu.step();
+        emu.step().unwrap();
+        emu.step().unwrap();
         // Check for each digit
         (0x0..=0xF).for_each(|i| {
             // Step 5 times
-            (0..5).for_each(|_| emu.step());
+            (0..5).for_each(|_| emu.step().unwrap());
             // Check the digit was drawn at (i, i)
             (0..5).for_each(|y| {
                 (0..8).for_each(|x| {

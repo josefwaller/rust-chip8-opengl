@@ -1,3 +1,4 @@
+use crate::errors::OpcodeError;
 use rand::Rng;
 
 const SCREEN_WIDTH: usize = 64;
@@ -100,9 +101,10 @@ impl Processor {
      * Perform the next step in whatever program has been loaded into memory.
      * Equivalent to just calling `execute` and incrementing `PC` by 2
      **/
-    pub fn step(&mut self) {
-        self.execute(((self.mem[self.pc] as u16) << 8) | self.mem[self.pc + 1] as u16);
+    pub fn step(&mut self) -> Result<(), OpcodeError> {
+        let r = self.execute(((self.mem[self.pc] as u16) << 8) | self.mem[self.pc + 1] as u16);
         self.pc += 2;
+        r
     }
     /**
      * Function that decrements both timer registers.
@@ -122,7 +124,7 @@ impl Processor {
      * Executes a single given instruction.
      * Does not increment PC or affect DT or ST.
      **/
-    pub fn execute(&mut self, inst: u16) {
+    pub fn execute(&mut self, inst: u16) -> Result<(), OpcodeError> {
         if self.debug_print {
             println!("Inst is {:X}", inst);
             println!("Initial state:");
@@ -152,7 +154,7 @@ impl Processor {
             0x4000 => self.sne_r_kk(inst),
             0x5000 => {
                 if inst & 0xF != 0 {
-                    self.unknown_opcode_panic(inst);
+                    return Err(OpcodeError::new(inst, self.pc as u8));
                 }
                 self.se_rx_ry(reg_at(inst, 1), reg_at(inst, 2));
             }
@@ -171,12 +173,12 @@ impl Processor {
                     6 => self.shr(rx, ry),
                     7 => self.subn(rx, ry),
                     0xE => self.shl(rx, ry),
-                    _ => self.unknown_opcode_panic(inst),
+                    _ => return Err(OpcodeError::new(inst, self.pc as u8)),
                 }
             }
             0x9000 => {
                 if inst & 0xF != 0 {
-                    self.unknown_opcode_panic(inst);
+                    return Err(OpcodeError::new(inst, self.pc as u8));
                 }
                 self.sne_rx_ry(reg_at(inst, 1), reg_at(inst, 2));
             }
@@ -187,7 +189,7 @@ impl Processor {
             0xE000 => match inst & 0x00FF {
                 0x9E => self.skp_r(reg_at(inst, 1)),
                 0xA1 => self.sknp_r(reg_at(inst, 1)),
-                _ => self.unknown_opcode_panic(inst),
+                _ => return Err(OpcodeError::new(inst, self.pc as u8)),
             },
             0xF000 => match inst & 0x00FF {
                 0x07 => self.ld_r_dt(reg_at(inst, 1)),
@@ -199,19 +201,17 @@ impl Processor {
                 0x33 => self.ld_bcd_r(reg_at(inst, 1)),
                 0x55 => self.store_at_i(reg_at(inst, 1)),
                 0x65 => self.load_from_i(reg_at(inst, 1)),
-                _ => self.unknown_opcode_panic(inst),
+                _ => return Err(OpcodeError::new(inst, self.pc as u8)),
             },
-            _ => self.unknown_opcode_panic(inst),
+            _ => return Err(OpcodeError::new(inst, self.pc as u8)),
         }
         if self.debug_print {
             println!("Post state:");
             self.dump_state();
         }
         self.last_key_released = None;
-    }
 
-    fn unknown_opcode_panic(&self, opcode: u16) {
-        panic!("Unknown opcode '{:04X}' provided!", opcode);
+        return Ok(());
     }
 
     /**

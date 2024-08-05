@@ -1,3 +1,4 @@
+mod errors;
 mod interfaces;
 mod processor;
 
@@ -35,7 +36,7 @@ impl ToString for Mode {
 
 #[derive(Parser, Debug)]
 #[command(name = "Rust CHIP-8 OpenGl")]
-#[command(version = "1.0.3")]
+#[command(version = "1.1.3")]
 #[command(about = "Simulate running CHIP-8 programs", long_about = None)]
 struct Args {
     // UI to use
@@ -104,7 +105,7 @@ fn main() {
                 last_pc = pc;
             }
         }
-        p.step();
+        p.step().unwrap();
 
         if interface.update(&mut p) {
             break;
