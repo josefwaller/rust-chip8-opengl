@@ -72,9 +72,6 @@ impl Interface for TerminalInterface {
                         KeyCode::Char(c) => match KEY_MAP.iter().position(|ch| *ch == c) {
                             Some(i) => {
                                 inputs[i] = !inputs[i];
-                                if !inputs[i] {
-                                    p.on_key_release(i as u8);
-                                }
                             }
                             None => {}
                         },
@@ -85,14 +82,6 @@ impl Interface for TerminalInterface {
             }
             p.update_inputs(inputs);
         }
-        // Hacky-ish way to detect key up
-        for i in 0..0xF {
-            if !inputs[i] && p.get_input_state(i) {
-                p.on_key_release(i as u8);
-                break;
-            }
-        }
-        p.update_inputs(inputs);
         match &self.sink {
             Some(s) => {
                 if s.is_paused() && p.get_st() > 0 {

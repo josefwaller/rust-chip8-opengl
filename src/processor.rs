@@ -118,6 +118,11 @@ impl Processor {
      * Update the current input states to the inputs given.
      **/
     pub fn update_inputs(&mut self, inputs: [bool; 0x10]) {
+        inputs.iter().enumerate().for_each(|(i, v)| {
+            if !v && self.input_state[i] {
+                self.last_key_released = Some(i as u8);
+            }
+        });
         self.input_state = inputs;
     }
     /**
@@ -464,12 +469,6 @@ impl Processor {
     /// Get the S (sound) time register.
     pub fn get_st(&self) -> u8 {
         return self.st;
-    }
-    /**
-     * Method that should be called by an interface whenever a key (0-F) is released.
-     */
-    pub fn on_key_release(&mut self, kp: u8) {
-        self.last_key_released = Some(kp);
     }
 }
 

@@ -244,9 +244,6 @@ impl Interface for OpenGlInterface {
                                 glfw::Action::Release => false,
                                 _ => self.input_states[i],
                             };
-                            if action == glfw::Action::Release {
-                                p.on_key_release(i as u8);
-                            }
                         }
                         _ => {}
                     }

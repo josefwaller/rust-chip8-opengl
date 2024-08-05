@@ -490,12 +490,15 @@ mod tests {
     #[test]
     fn test_ld_vx_kp() {
         stress_test(|emu, x, _y, val_x, _val_y| {
-            let inputs = [false; 0x10];
+            let mut inputs = [false; 0x10];
             emu.update_inputs(inputs);
             emu.execute(build_inst(0xF, x, 0x0, 0xA)).unwrap();
             assert_eq_hex!(emu.get_register_value(x), val_x);
             let new_val = rand_byte(0xF);
-            emu.on_key_release(new_val as u8);
+            inputs[new_val as usize] = true;
+            emu.update_inputs(inputs);
+            inputs[new_val as usize] = false;
+            emu.update_inputs(inputs);
             emu.execute(build_inst(0xF, x, 0x0, 0xA)).unwrap();
             assert_eq_hex!(emu.get_register_value(x), new_val as u8);
         })
