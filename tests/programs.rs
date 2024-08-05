@@ -3,7 +3,7 @@ extern crate assert_hex;
 
 mod tests {
     use assert_hex::assert_eq_hex;
-    use rust_chip8_opengl::processor::{Processor, SPRITES};
+    use rust_chip8_opengl::{processor::SPRITES, Processor};
 
     #[test]
     fn test_fibinnaci() {
