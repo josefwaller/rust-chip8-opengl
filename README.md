@@ -1,6 +1,6 @@
 # rust-chip8-opengl
 [![Crates.io](https://img.shields.io/crates/v/rust-chip8-opengl)](https://crates.io/crates/rust-chip8-opengl)
-[![Docs.rs](https://docs.rs/rust-chip8-opengl/badge.svg)](https://docs.rs/rust-chip8-opengl/1.0.0/rust_chip8_opengl/)
+[![Docs.rs](https://docs.rs/rust-chip8-opengl/badge.svg)](https://docs.rs/rust-chip8-opengl/1.1.3/rust_chip8_opengl/)
 ![Tests](https://github.com/josefwaller/rust-chip8-opengl/actions/workflows/rust.yml/badge.svg)
 
 A CHIP-8 emulator written in rust.
