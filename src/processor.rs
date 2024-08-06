@@ -402,14 +402,16 @@ impl Processor {
     }
     fn draw(&mut self, rx: usize, ry: usize, n: usize) {
         self.registers[0xF] = 0;
-        let x = self.registers[rx];
-        let y = self.registers[ry];
+        let x = self.registers[rx] % SCREEN_WIDTH as u8;
+        let y = self.registers[ry] % SCREEN_HEIGHT as u8;
         // XOR data onto screen
         for j in 0..n {
             let mut val = self.mem[self.i as usize + j];
             for k in 0..8 {
-                let coord: usize = ((y as usize + j) % SCREEN_HEIGHT) * SCREEN_WIDTH
-                    + (x as usize + k) % SCREEN_WIDTH;
+                if x as usize + k >= SCREEN_WIDTH || y as usize + j >= SCREEN_HEIGHT {
+                    continue;
+                }
+                let coord: usize = (y as usize + j) * SCREEN_WIDTH + x as usize + k;
                 let p = (val & 0x80) != 0; // Get MSB
                 if p && self.screen_buffer[coord] {
                     self.registers[0xF] = 1;

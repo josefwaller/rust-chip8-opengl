@@ -400,8 +400,8 @@ mod tests {
             emu.execute(build_inst(0xF, n, 0x5, 0x5)).unwrap();
             emu.execute(0xA200).unwrap();
             // Choose a random location
-            let px: u8 = rand_byte(64) as u8;
-            let py = rand_byte(32) as u8;
+            let px: u8 = rand_byte(55) as u8;
+            let py = rand_byte(23) as u8;
             // Save what was in the screen before
             let prev_screen: Vec<bool> = (0..n as usize * 8)
                 .map(|i| emu.get_pixel_at(px + (i % 8) as u8, py + (i / 8) as u8))
