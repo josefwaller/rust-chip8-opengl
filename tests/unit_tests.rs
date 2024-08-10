@@ -410,6 +410,7 @@ mod tests {
             emu.execute(build_inst(0x6, x, px >> 4, px)).unwrap();
             emu.execute(build_inst(0x6, y, py >> 4, py)).unwrap();
             // Draw
+            emu.on_v_blank();
             emu.execute(build_inst(0xD, x, y, n)).unwrap();
             // Check memory was XORed
             (0..n as usize * 8).for_each(|i| {

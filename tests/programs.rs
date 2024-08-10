@@ -48,6 +48,7 @@ mod tests {
         emu.load_program_u16(&PROGRAM);
         while emu.get_program_counter() != 0x002 {
             emu.step().unwrap();
+            emu.on_v_blank();
         }
         const SMILEY: [[bool; 8]; 4] = [
             [false, true, false, false, false, false, true, false],
@@ -71,6 +72,7 @@ mod tests {
         emu.step().unwrap();
         // Check for each digit
         (0x0..=0xF).for_each(|i| {
+            emu.on_v_blank();
             // Step 5 times
             (0..5).for_each(|_| emu.step().unwrap());
             // Check the digit was drawn at (i, i)
