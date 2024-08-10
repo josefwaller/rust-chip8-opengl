@@ -9,6 +9,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand,
 };
+use gl::types::GLsync;
 use rodio::{source::SineWave, OutputStream, Sink};
 
 use std::{

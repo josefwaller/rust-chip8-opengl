@@ -55,6 +55,8 @@ pub struct Processor {
     // Used for LD X KP and nothing else
     // Reset every execution
     last_key_released: Option<u8>,
+
+    vblank: bool,
 }
 
 impl Processor {
@@ -72,6 +74,7 @@ impl Processor {
             input_state: [false; 0x10],
             debug_print: false,
             last_key_released: None,
+            vblank: false,
         };
         (0..0x10).for_each(|i| c.mem[(6 * i)..(6 * i + 5)].copy_from_slice(&SPRITES[i]));
 
@@ -401,6 +404,11 @@ impl Processor {
         self.registers[x] = self.dt;
     }
     fn draw(&mut self, rx: usize, ry: usize, n: usize) {
+        if !self.vblank {
+            self.pc -= 2;
+            return;
+        }
+        self.vblank = false;
         self.registers[0xF] = 0;
         let x = self.registers[rx] % SCREEN_WIDTH as u8;
         let y = self.registers[ry] % SCREEN_HEIGHT as u8;
@@ -471,6 +479,12 @@ impl Processor {
     /// Get the S (sound) time register.
     pub fn get_st(&self) -> u8 {
         return self.st;
+    }
+    /// Callback on VBlank (vertical interrupt)
+    /// Used to ensure display waiting
+    /// To ignore, just call every tick
+    pub fn on_v_blank(&mut self) {
+        self.vblank = true;
     }
 }
 

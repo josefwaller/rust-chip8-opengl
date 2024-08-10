@@ -104,9 +104,9 @@ impl OpenGlInterface {
             return ((4 * pixel) + [0, 1, 2, 0, 2, 3][i % 6]) as i32;
         });
 
-        // Default color is just white
-        let colors: [f32; 3 * 4 * 65 * 33] = array::from_fn(|_| {
-            return 1.0 as f32;
+        // Default color is just black
+        let colors: [f32; 3 * 4 * 64 * 32] = array::from_fn(|_| {
+            return 0.0 as f32;
         });
 
         let mut vao = 0;
@@ -268,21 +268,19 @@ impl Interface for OpenGlInterface {
         // render
         // ------
         unsafe {
-            gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-
             // Calculate colors of each vertex
             // 3 floats per color * 4 colors/vertices per pixel
-            let colors: [f32; 3 * 4 * 64 * 32] = array::from_fn(|i| {
-                let x = (i / 3 / 4) % 64;
-                let y = (i / 3 / 4) / 64;
-                // Our screen starts at the top left
-                return if p.get_pixel_at(x as u8, 63 - y as u8) {
-                    1
-                } else {
-                    0
-                } as f32;
-            });
+            let mut colors: [f32; 12 * 32 * 64] = [0.0; 12 * 32 * 64];
+            for y in 0..32 as usize {
+                for x in 0..64 as usize {
+                    let c = if p.get_pixel_at(x as u8, 63 - y as u8) {
+                        1
+                    } else {
+                        0
+                    } as f32;
+                    colors[(12 * (x + 64 * y))..(12 * (x + 64 * y + 1))].copy_from_slice(&[c; 12]);
+                }
+            }
 
             // Refresh color buffer
             gl::BindBuffer(gl::ARRAY_BUFFER, self.cbo);

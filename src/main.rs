@@ -86,11 +86,14 @@ fn main() {
     p.load_program(data.as_slice());
     let mut dt = Instant::now();
     let mut rt = Instant::now();
-    let mut ct = Instant::now();
+    let mut ct: Instant = Instant::now();
     let mut last_pc: usize = 0x0000;
+
+    // Clock speed in Hz
+    let clock_speed = 500;
     loop {
-        let pc = p.get_program_counter();
         if !args.debug_file.is_empty() {
+            let pc: usize = p.get_program_counter();
             let inst = ((p.get_mem_at(pc) as u16) << 8) + p.get_mem_at(pc + 1) as u16;
             // Don't write the exact same instruction multiple times in a row
             if pc != last_pc {
@@ -105,7 +108,10 @@ fn main() {
                 last_pc = pc;
             }
         }
-        p.step().unwrap();
+        match p.step() {
+            Ok(()) => {}
+            Err(e) => panic!("{}", e),
+        }
 
         if interface.update(&mut p) {
             break;
@@ -117,13 +123,13 @@ fn main() {
             dt = Instant::now();
         }
 
-        // Render at 60Hz
-        if rt.elapsed().as_millis() >= 60 {
+        // FPS to render at
+        const FPS: u128 = 60;
+        if rt.elapsed().as_millis() >= 1000 / FPS {
             interface.render(&p);
+            p.on_v_blank();
             rt = Instant::now();
         }
-        // Clock speed in Hz
-        let clock_speed = 1000;
         thread::sleep(Duration::from_millis(1000 / clock_speed).saturating_sub(ct.elapsed()));
         ct = Instant::now();
     }

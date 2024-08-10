@@ -1,5 +1,4 @@
 use std::fmt;
-use std::fmt::{Display, Formatter};
 
 /// Error that is returned when the processor encounters an invalid opcode
 #[derive(Debug, Clone)]
@@ -16,8 +15,8 @@ impl OpcodeError {
     }
 }
 
-impl Display for OpcodeError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl fmt::Display for OpcodeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "Invalid opcode {:x} encountered at PC = {:x}",
