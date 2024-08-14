@@ -4,7 +4,7 @@ description = "A CHIP-8 emulator written in rust. Can be ran as a CLI rendering 
 license = "MIT"
 repository = "https://github.com/josefwaller/rust-chip8-opengl"
 readme = "README.md"
-version = "1.1.5"
+version = "1.1.6"
 edition = "2021"
 
 [dev-dependencies]
