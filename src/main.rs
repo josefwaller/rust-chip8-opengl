@@ -124,10 +124,10 @@ fn main() {
         }
 
         // FPS to render at
-        const FPS: u128 = 120;
+        const FPS: u128 = 60;
         if rt.elapsed().as_millis() >= 1000 / FPS {
-            p.on_v_blank();
             interface.render(&p);
+            p.on_v_blank();
             rt = Instant::now();
         }
         thread::sleep(Duration::from_millis(1000 / clock_speed).saturating_sub(ct.elapsed()));

@@ -416,11 +416,10 @@ impl Processor {
         for j in 0..n {
             let mut val = self.mem[self.i as usize + j];
             for k in 0..8 {
-                if x as usize >= SCREEN_WIDTH || y as usize >= SCREEN_HEIGHT {
+                if x as usize + k >= SCREEN_WIDTH || y as usize + j >= SCREEN_HEIGHT {
                     continue;
                 }
-                let coord: usize = (y as usize + j) % SCREEN_HEIGHT * SCREEN_WIDTH
-                    + (x as usize + k) % SCREEN_WIDTH;
+                let coord: usize = (y as usize + j) * SCREEN_WIDTH + x as usize + k;
                 let p = (val & 0x80) != 0; // Get MSB
                 if p && self.screen_buffer[coord] {
                     self.registers[0xF] = 1;
